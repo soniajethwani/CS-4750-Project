@@ -42,16 +42,27 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Protected route
 app.get("/profile", authenticateToken, async (req, res) => {
-  const user = await pool.query("SELECT id, username FROM users WHERE id = $1", [req.user.id]);
-  res.json(user.rows[0]);
+  try {
+    const result = await pool.query(
+      "SELECT user_id, username, profile_picture, biography, privacy_setting FROM users WHERE username = $1",
+      [req.user.username]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 function authenticateToken(req, res, next) {
-  const token = req.headers["authorization"];
-  if (!token) return res.sendStatus(403);
-  jwt.verify(token, SECRET, (err, user) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) return res.sendStatus(403);
     req.user = user;
     next();

@@ -6,6 +6,7 @@ function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   const handleRegister = async () => {
     try {
@@ -32,10 +33,15 @@ function App() {
   };
 
   const getProfile = async () => {
-    const res = await axios.get("http://localhost:4000/profile", {
-      headers: { Authorization: token },
-    });
-    alert(`You are logged in as: ${res.data.username}`);
+    try {
+      const res = await axios.get("http://localhost:4000/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProfile(res.data);
+    } catch (err) {
+      alert("Failed to fetch profile");
+      console.error(err);
+    }
   };
 
   return (
@@ -58,7 +64,7 @@ function App() {
         <Typography variant="h5" gutterBottom>
           {token ? "Welcome!" : "Login / Register"}
         </Typography>
-
+  
         {!token ? (
           <>
             <TextField
@@ -115,6 +121,27 @@ function App() {
             >
               Logout
             </Button>
+  
+            {profile && (
+              <Box mt={4} textAlign="left">
+                <Typography variant="h6" gutterBottom>
+                  User Profile
+                </Typography>
+                <Typography><strong>User ID:</strong> {profile.user_id}</Typography>
+                <Typography><strong>Username:</strong> {profile.username}</Typography>
+                <Typography><strong>Biography:</strong> {profile.biography}</Typography>
+                <Typography><strong>Privacy:</strong> {profile.privacy_setting}</Typography>
+                {/* {profile.profile_picture && (
+                  <Box mt={2} display="flex" justifyContent="center">
+                    <img
+                      src={profile.profile_picture}
+                      alt="Profile"
+                      style={{ width: 100, height: 100, borderRadius: "50%" }}
+                    />
+                  </Box>
+                )} */}
+              </Box>
+            )}
           </>
         )}
       </Box>
