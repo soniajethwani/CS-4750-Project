@@ -353,6 +353,66 @@ app.post("/posts", authenticateToken, upload.single('media'), async (req, res) =
   }
 });
 
+// Enhanced profile endpoint that includes posts
+app.get("/fullprofile", authenticateToken, async (req, res) => {
+  try {
+    // Get user profile
+    const profileRes = await pool.query(
+      "SELECT user_id, username, profile_picture, biography, privacy_setting FROM users WHERE user_id = $1",
+      [req.user.id]
+    );
+    
+    if (profileRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get user's posts
+    const postsRes = await pool.query(
+      `SELECT p.*,
+       json_agg(
+         DISTINCT jsonb_build_object(
+           'media_id', m.media_id,
+           'media_type', m.media_type,
+           'mime_type', m.mime_type,
+           'file_size', m.file_size,
+           'data', m.media_data
+         )
+       ) as media,
+       (SELECT json_build_object(
+          'workout_id', w.workout_id,
+          'date', w.date,
+          'exercises', (
+            SELECT json_agg(
+              json_build_object(
+                'name', e.name,
+                'target_muscle', e.target_muscle,
+                'weight', we.weight,
+                'reps', we.reps,
+                'sets', we.sets
+              )
+            )
+            FROM workout_exercises we
+            JOIN exercises e ON we.exercise_id = e.exercise_id
+            WHERE we.workout_id = w.workout_id
+          )
+        ) FROM workout w WHERE w.post_id = p.post_id) as workout
+       FROM posts p
+       LEFT JOIN media m ON p.post_id = m.post_id
+       WHERE p.user_id = $1
+       GROUP BY p.post_id
+       ORDER BY p.timestamp DESC`,
+      [req.user.id]
+    );
+
+    res.json({
+      profile: profileRes.rows[0],
+      posts: postsRes.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Single exercise endpoint that combines DB and API results
 app.get("/api/exercises", authenticateToken, async (req, res) => {
   try {

@@ -62,7 +62,16 @@ function LogWorkout() {
 
   return (
     <Box p={4}>
-      <Typography variant="h4" gutterBottom>Log Workout</Typography>
+      <Box mb={4} display="flex" justifyContent="space-between">
+        <Typography variant="h4" gutterBottom>Log Workout</Typography>
+        <Button 
+          variant="contained" 
+          color="primary"
+          onClick={() => navigate('/profile')}
+        >
+          Back to Profile
+        </Button>
+      </Box>
       
       {/* Exercise Search */}
       <Box mb={4}>
