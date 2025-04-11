@@ -35,7 +35,7 @@ app.post("/login", async (req, res) => {
   const userRes = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
   const user = userRes.rows[0];
   if (user && await bcrypt.compare(password, user.password)) {
-    const token = jwt.sign({ id: user.id }, SECRET);
+    const token = jwt.sign({ id: user.id, username: user.username }, SECRET);
     res.json({ token });
   } else {
     res.status(401).json({ error: "Invalid credentials" });
@@ -57,15 +57,21 @@ app.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
+
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+  if (!token) {
+      console.log("No token provided");
+      return res.sendStatus(401);
+  }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
+      if (err) {
+          return res.sendStatus(403);
+      }
+      req.user = user;
+      next();
   });
 }
 

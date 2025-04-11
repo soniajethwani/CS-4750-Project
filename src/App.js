@@ -37,6 +37,7 @@ function App() {
       const res = await axios.get("http://localhost:4000/profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log(res.data);
       setProfile(res.data);
     } catch (err) {
       alert("Failed to fetch profile");
