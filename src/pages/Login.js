@@ -8,14 +8,19 @@ function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  const handleRegister = async () => {
+    try {
+      await axios.post("http://localhost:4000/register", { username, password });
+      alert("Registered successfully!");
+    } catch (err) {
+      alert(err.response?.data?.error || "Registration failed");
+    }
+  };
+
   const handleLogin = async () => {
     try {
-      const res = await axios.post("http://localhost:4000/login", { 
-        username, 
-        password 
-      });
+      const res = await axios.post("http://localhost:4000/login", { username, password });
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("username", username);
       navigate("/profile");
     } catch (err) {
       alert("Login failed");
@@ -40,7 +45,7 @@ function Login() {
         textAlign="center"
       >
         <Typography variant="h5" gutterBottom>
-          Login
+          Login / Register
         </Typography>
         <TextField
           label="Username"
@@ -57,15 +62,25 @@ function Login() {
           margin="normal"
           onChange={(e) => setPassword(e.target.value)}
         />
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={handleLogin}
-          fullWidth
-          style={{ marginTop: "20px" }}
-        >
-          Login
-        </Button>
+        <Box display="flex" justifyContent="space-between" mt={2}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={handleLogin}
+            fullWidth
+            style={{ marginRight: "10px" }}
+          >
+            Login
+          </Button>
+          <Button 
+            variant="contained" 
+            color="secondary" 
+            onClick={handleRegister}
+            fullWidth
+          >
+            Register
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
