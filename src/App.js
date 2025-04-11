@@ -21,12 +21,10 @@ function App() {
 
   const handleClickOpen = () => {
     setOpen(true);
-    console.log("Modal state set to open");
   };
 
   const handleClose = () => {
     setOpen(false);
-    console.log("Modal state set to close");
   };
 
 
@@ -65,9 +63,7 @@ function App() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProfile(res.data);
-      console.log("calling Modal open function");
       handleClickOpen(); 
-      console.log("Modal open function called");
     } catch (err) {
       alert("Failed to fetch profile");
       console.error(err);
@@ -175,23 +171,3 @@ function App() {
 }
 
 export default App;
-// {profile && (
-//   <Box mt={4} textAlign="left">
-//     <Typography variant="h6" gutterBottom>
-//       User Profile
-//     </Typography>
-//     <Typography><strong>User ID:</strong> {profile.user_id}</Typography>
-//     <Typography><strong>Username:</strong> {profile.username}</Typography>
-//     <Typography><strong>Biography:</strong> {profile.biography}</Typography>
-//     <Typography><strong>Privacy:</strong> {profile.privacy_setting}</Typography>
-//     {/* {profile.profile_picture && (
-//       <Box mt={2} display="flex" justifyContent="center">
-//         <img
-//           src={profile.profile_picture}
-//           alt="Profile"
-//           style={{ width: 100, height: 100, borderRadius: "50%" }}
-//         />
-//       </Box>
-//     )} */}
-//   </Box>
-// )}
