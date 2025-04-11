@@ -49,7 +49,7 @@ To run the backed server:
 
 3. Run the following command:
 
-`node server.js`
+### `node server.js`
 
 This starts the Node.js backend server. **Make sure to start the backend before interacting with any frontend features that require server access!**
 
