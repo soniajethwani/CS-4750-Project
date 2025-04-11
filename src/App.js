@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { TextField, Button, Box, Typography } from "@mui/material";
@@ -167,6 +168,23 @@ function App() {
         )}
       </Box>
     </Box>
+=======
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
+import LogWorkout from "./pages/LogWorkout";
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/log-workout" element={<LogWorkout />} />
+      </Routes>
+    </Router>
+>>>>>>> de31e0d3c2ab7ee1541411c4c95358a041f8f7a3
   );
 }
 
