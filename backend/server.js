@@ -184,11 +184,7 @@ app.post("/login", async (req, res) => {
   const user = userRes.rows[0];
   
   if (user && await bcrypt.compare(password, user.password)) {
-<<<<<<< HEAD
-    const token = jwt.sign({ id: user.id, username: user.username }, SECRET);
-=======
     const token = jwt.sign({ id: user.user_id, username: user.username }, SECRET);
->>>>>>> de31e0d3c2ab7ee1541411c4c95358a041f8f7a3
     res.json({ token });
   } else {
     res.status(401).json({ error: "Invalid credentials" });
@@ -208,25 +204,6 @@ app.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) {
-      console.log("No token provided");
-      return res.sendStatus(401);
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-      if (err) {
-          return res.sendStatus(403);
-      }
-      req.user = user;
-      next();
-  });
-}
-=======
 app.get("/posts", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
@@ -280,7 +257,6 @@ app.post("/posts", authenticateToken, upload.single('media'), async (req, res) =
     const { caption, exercises } = req.body;
     const userId = req.user.id;
     const parsedExercises = JSON.parse(exercises);
->>>>>>> de31e0d3c2ab7ee1541411c4c95358a041f8f7a3
 
     // Create post
     const postInsert = await client.query(
