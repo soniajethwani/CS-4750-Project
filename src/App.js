@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { TextField, Button, Box, Typography } from "@mui/material";
 import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+
 
 
 function App() {
@@ -10,6 +11,13 @@ function App() {
   const [token, setToken] = useState(null);
   const [profile, setProfile] = useState(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
+      setToken(savedToken);
+    }
+  }, []);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -33,19 +41,23 @@ function App() {
   };
 
   const handleLogin = async () => {
-    try {
-      const res = await axios.post("http://localhost:4000/login", { username, password });
-      setToken(res.data.token);
-      alert("Logged in!");
-    } catch (err) {
-      alert("Login failed");
-    }
-  };
+      try {
+        const res = await axios.post("http://localhost:4000/login", { username, password });
+        const token = res.data.token;
+        localStorage.setItem("token", token);
+        setToken(token);
+        alert("Logged in!");
+      } catch (err) {
+        alert("Login failed");
+      }
+    };
 
-  const handleLogout = () => {
-    setToken(null);
-    alert("Logged out");
-  };
+    const handleLogout = () => {
+      localStorage.removeItem("token");
+      setToken(null);
+      setProfile(null);
+      alert("Logged out");
+    };
 
   const getProfile = async () => {
     try {
@@ -53,6 +65,7 @@ function App() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProfile(res.data);
+      console.log("calling Modal open function");
       handleClickOpen(); 
       console.log("Modal open function called");
     } catch (err) {
