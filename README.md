@@ -1,3 +1,5 @@
+GitHub Repository: https://github.com/soniajethwani/CS-4750-Project/tree/main
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
