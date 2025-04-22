@@ -5,6 +5,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import SearchIcon from '@mui/icons-material/Search';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import PersonIcon from '@mui/icons-material/Person';
+import GroupIcon from '@mui/icons-material/Group';
 
 export default function BottomNav() {
   const navigate = useNavigate();
@@ -13,13 +14,14 @@ export default function BottomNav() {
     '/feed': 0,
     '/search': 1,
     '/log-workout': 2,
-    '/profile': 3
+    '/groups': 3,
+    '/profile': 4,
   };
   const [value, setValue] = React.useState(mapping[location.pathname] || 0);
 
   const handleChange = (_, newValue) => {
     setValue(newValue);
-    const paths = ['/feed', '/search', '/log-workout', '/profile'];
+    const paths = ['/feed', '/search', '/log-workout', '/groups', '/profile'];
     navigate(paths[newValue]);
   };
 
@@ -32,6 +34,7 @@ export default function BottomNav() {
         <BottomNavigationAction label="Home" icon={<HomeIcon />} />
         <BottomNavigationAction label="Search" icon={<SearchIcon />} />
         <BottomNavigationAction label="Log" icon={<FitnessCenterIcon />} />
+        <BottomNavigationAction label="Groups" icon={<GroupIcon />} />
         <BottomNavigationAction label="Profile" icon={<PersonIcon />} />
       </BottomNavigation>
     </Paper>

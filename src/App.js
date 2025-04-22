@@ -5,6 +5,7 @@ import Feed from "./pages/Feed";
 import Search from "./pages/Search";   
 import Profile from "./pages/Profile";
 import LogWorkout from "./pages/LogWorkout";
+import Groups from "./pages/Groups";
 import Layout from "./components/Layout";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <Route path="/feed" element={<Feed />} />
           <Route path="/search" element={<Search />} />
           <Route path="/log-workout" element={<LogWorkout />} />
+          <Route path="/groups" element={<Groups />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/search" element={<div>Search coming soon…</div>} />
         </Route>

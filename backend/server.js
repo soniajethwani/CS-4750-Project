@@ -559,6 +559,119 @@ app.get("/search", authenticateToken, async (req, res) => {
   }
 });
 
+// GET /groups — list all groups the user is a member of
+app.get("/groups", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT g.group_id,
+              g.group_name,
+              g.description,
+              g.privacy_setting
+       FROM groups g
+       JOIN group_members gm ON g.group_id = gm.group_id
+       WHERE gm.user_id = $1
+       ORDER BY g.group_name;`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch user groups error:", err);
+    res.status(500).json({ error: "Failed to fetch user groups" });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /groups — create a new group (and auto‑add creator as member)
+app.post("/groups", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { group_name, description, privacy_setting } = req.body;
+    await client.query("BEGIN");
+
+    // 1) create the group
+    const insertRes = await client.query(
+      `INSERT INTO groups
+         (group_name, description, privacy_setting, admin_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING group_id`,
+      [group_name, description, privacy_setting, req.user.id]
+    );
+    const groupId = insertRes.rows[0].group_id;
+
+    // 2) add creator as member
+    await client.query(
+      `INSERT INTO group_members (group_id, user_id)
+       VALUES ($1, $2)`,
+      [groupId, req.user.id]
+    );
+
+    await client.query("COMMIT");
+    res.status(201).json({ group_id: groupId });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Create group error:", err);
+    res.status(500).json({ error: "Failed to create group" });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /groups/feed — posts from groups you belong to
+app.get("/groups/feed", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const userId = req.user.id;
+    const feedRes = await client.query(
+      `SELECT p.*,
+              g.group_name,
+              u.username,
+              json_agg(DISTINCT jsonb_build_object(
+                'media_id', m.media_id,
+                'media_type', m.media_type,
+                'mime_type', m.mime_type,
+                'file_size', m.file_size,
+                'data', m.media_data
+              )) AS media,
+              (SELECT json_build_object(
+                 'workout_id', w.workout_id,
+                 'date', w.date,
+                 'exercises', (
+                   SELECT json_agg(
+                     json_build_object(
+                       'name', e.name,
+                       'target_muscle', e.target_muscle,
+                       'weight', we.weight,
+                       'reps', we.reps,
+                       'sets', we.sets
+                     )
+                   )
+                   FROM workout_exercises we
+                   JOIN exercises e ON we.exercise_id = e.exercise_id
+                   WHERE we.workout_id = w.workout_id
+                 )
+               ) FROM workout w WHERE w.post_id = p.post_id) AS workout
+       FROM posts p
+       JOIN groups g   ON p.group_id = g.group_id
+       JOIN users u    ON p.user_id = u.user_id
+       LEFT JOIN media m ON p.post_id = m.post_id
+       WHERE p.group_id IN (
+         SELECT group_id FROM group_members WHERE user_id = $1
+       )
+       GROUP BY p.post_id, g.group_name, u.username
+       ORDER BY p.timestamp DESC;`,
+      [userId]
+    );
+    res.json(feedRes.rows);
+  } catch (err) {
+    console.error("Groups feed error:", err);
+    res.status(500).json({ error: "Failed to fetch group feed" });
+  } finally {
+    client.release();
+  }
+});
+
 
 // Initialize server
 app.listen(4000, async () => {
