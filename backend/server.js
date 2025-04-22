@@ -445,6 +445,121 @@ app.get("/api/exercises", authenticateToken, async (req, res) => {
   }
 });
 
+// GET /feed — posts by users you follow or in your groups
+app.get("/feed", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const userId = req.user.id;
+    const feedRes = await client.query(
+      `SELECT p.*,
+              u.username,
+              p.group_id,
+              g.group_name,
+              json_agg(DISTINCT jsonb_build_object(
+                'media_id', m.media_id,
+                'media_type', m.media_type,
+                'mime_type', m.mime_type,
+                'file_size', m.file_size,
+                'data', m.media_data
+              )) AS media,
+              (SELECT json_build_object(
+                 'workout_id', w.workout_id,
+                 'date', w.date,
+                 'exercises', (
+                   SELECT json_agg(
+                     json_build_object(
+                       'name', e.name,
+                       'target_muscle', e.target_muscle,
+                       'weight', we.weight,
+                       'reps', we.reps,
+                       'sets', we.sets
+                     )
+                   )
+                   FROM workout_exercises we
+                   JOIN exercises e ON we.exercise_id = e.exercise_id
+                   WHERE we.workout_id = w.workout_id
+                 )
+               ) FROM workout w WHERE w.post_id = p.post_id) AS workout
+       FROM posts p
+       JOIN users u ON p.user_id = u.user_id
+       LEFT JOIN groups g ON p.group_id = g.group_id
+       LEFT JOIN media m ON p.post_id = m.post_id
+       WHERE
+         -- posts by users you follow or your own
+         p.user_id = $1
+         OR p.user_id IN (
+           SELECT followed_user_id FROM followers WHERE follower_user_id = $1
+         )
+         -- OR posts in groups you’re a member of
+         OR p.group_id IN (
+           SELECT group_id FROM group_members WHERE user_id = $1
+         )
+       GROUP BY p.post_id, u.username, g.group_id, g.group_name
+       ORDER BY p.timestamp DESC;`,
+      [userId]
+    );
+    res.json(feedRes.rows);
+  } catch (err) {
+    console.error("Feed fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch feed" });
+  } finally {
+    client.release();
+  }
+});
+
+// SEARCH USERS & GROUPS
+// GET /search?q=foo
+// Returns users whose username or biography match, and groups whose name or description match.
+app.get("/search", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const q = `%${req.query.q || ""}%`;
+
+    // users matching
+    const usersRes = await client.query(
+      `SELECT 
+         u.user_id,
+         u.username,
+         u.profile_picture,
+         u.biography,
+         u.privacy_setting,
+         (SELECT COUNT(*) FROM followers f WHERE f.followed_user_id = u.user_id)   AS follower_count,
+         (SELECT COUNT(*) FROM followers f WHERE f.follower_user_id = u.user_id)  AS following_count
+       FROM users u
+       WHERE u.username ILIKE $1 OR u.biography ILIKE $1
+       ORDER BY u.username
+       LIMIT 50;`,
+      [q]
+    );
+
+    // groups matching
+    const groupsRes = await client.query(
+      `SELECT
+         g.group_id,
+         g.group_name,
+         g.description,
+         g.privacy_setting,
+         (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.group_id) AS member_count
+       FROM groups g
+       WHERE g.group_name ILIKE $1 OR g.description ILIKE $1
+       ORDER BY g.group_name
+       LIMIT 50;`,
+      [q]
+    );
+
+    res.json({
+      users: usersRes.rows,
+      groups: groupsRes.rows,
+    });
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).json({ error: "Search failed" });
+  } finally {
+    client.release();
+  }
+});
+
+
 // Initialize server
 app.listen(4000, async () => {
   console.log("Backend server running on port 4000");
