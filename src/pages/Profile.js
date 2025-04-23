@@ -126,8 +126,7 @@ function Profile() {
             style={{ width: 100, height: 100, borderRadius: '50%', marginRight: 16 }}
           />
         )}
-        <Box>
-          <Typography><strong>Bio:</strong> {profileData.profile.biography || 'No bio yet'}</Typography>
+        <Box display="flex" gap={4} mb={1}>
           <Typography>
             <strong>Followers:</strong> <Link component="button" onClick={handleFollowersOpen}>{profileData.profile.followers}</Link>
           </Typography>
@@ -139,7 +138,10 @@ function Profile() {
           </Typography>
         </Box>
       </Box>
-
+      <Box mt={3} mb={4}>
+          <Typography>{profileData.profile.biography || 'No bio yet'}</Typography>
+      </Box>
+   
 
       {/* Posts Section */}
       {profileData.posts.map((post) => (
