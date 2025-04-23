@@ -65,7 +65,11 @@ export default function Search() {
         <Grid container spacing={2} mt={1}>
           {results.users.map((u) => (
             <Grid item xs={12} md={6} key={u.user_id}>
-              <Card variant="outlined">
+              <Card
+                variant="outlined"
+                onClick={() => nav(`/users/${u.user_id}`)}
+                sx={{ cursor: "pointer" }}
+              >
                 <CardContent sx={{ display: "flex", alignItems: "center" }}>
                   <Avatar
                     src={
@@ -77,12 +81,9 @@ export default function Search() {
                   />
                   <Box flex={1}>
                     <Typography fontWeight="bold">{u.username}</Typography>
-                    <Typography noWrap>
-                      {u.biography || "No bio provided."}
-                    </Typography>
+                    <Typography noWrap>{u.biography || "No bio provided."}</Typography>
                     <Typography variant="caption">
-                      {u.follower_count} followers •{" "}
-                      {u.following_count} following •{" "}
+                      {u.follower_count} followers • {u.following_count} following •{" "}
                       {u.privacy_setting === "private" && "🔒 private"}
                     </Typography>
                   </Box>

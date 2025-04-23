@@ -834,6 +834,42 @@ app.get("/groups/:id", authenticateToken, async (req, res) => {
   }
 });
 
+//GET /users/:id — full user profile
+app.get("/users/:id", authenticateToken, async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const profileRes = await pool.query(`
+      SELECT user_id, username, profile_picture, biography, privacy_setting,
+        (SELECT COUNT(*) FROM followers WHERE followed_user_id = $1) AS follower_count,
+        (SELECT COUNT(*) FROM followers WHERE follower_user_id = $1) AS following_count
+      FROM users WHERE user_id = $1
+    `, [userId]);
+
+    const postsRes = await pool.query(`
+      SELECT p.*,
+        json_agg(DISTINCT jsonb_build_object(
+          'media_id', m.media_id,
+          'media_type', m.media_type,
+          'mime_type', m.mime_type,
+          'file_size', m.file_size,
+          'data', m.media_data
+        )) AS media
+      FROM posts p
+      LEFT JOIN media m ON p.post_id = m.post_id
+      WHERE p.user_id = $1
+      GROUP BY p.post_id
+      ORDER BY p.timestamp DESC
+    `, [userId]);
+
+    if (!profileRes.rows.length) return res.status(404).json({ error: "User not found" });
+
+    res.json({ ...profileRes.rows[0], posts: postsRes.rows });
+  } catch (err) {
+    console.error("Error loading user profile:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 // Initialize server
 app.listen(4000, async () => {
