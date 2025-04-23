@@ -89,7 +89,7 @@ function Profile() {
   return (
     <Box p={4}>
       <Box display="flex" justifyContent="space-between" mb={4}>
-        <Typography variant="h3">Welcome, {profileData.profile.username}!</Typography>
+        <Typography variant="h4">{profileData.profile.username}</Typography>
         <Box>
           <Button 
             variant="contained" 
