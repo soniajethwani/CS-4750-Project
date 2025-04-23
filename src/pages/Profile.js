@@ -11,6 +11,8 @@ function Profile() {
   const [followingOpen, setFollowingOpen] = useState(false);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const [groups, setGroups] = useState([]);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -19,6 +21,7 @@ function Profile() {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         setProfileData(response.data);
+        setGroups(response.data.groups); 
       } catch (error) {
         console.error('Error fetching profile:', error);
       }
@@ -63,6 +66,14 @@ function Profile() {
     } catch (err) {
       console.error('Failed to fetch following:', err);
     }
+  };
+
+  const handleGroupsOpen = () => {
+    setGroupsOpen(true);
+  };
+
+  const handleGroupsClose = () => {
+    setGroupsOpen(false)
   };
 
   const handleFollowersClose = () => {
@@ -124,10 +135,7 @@ function Profile() {
             <strong>Following:</strong> <Link component="button" onClick={handleFollowingOpen}>{profileData.profile.following}</Link>
           </Typography>
           <Typography>
-            <strong>Groups:</strong>{" "}
-            {profileData.groups.length > 0
-              ? profileData.groups.map((g, i) => g.group_name).join(", ")
-              : "No group memberships"}
+            <strong>Groups:</strong> <Link component="button" onClick={handleGroupsOpen}>{groups.length}</Link>
           </Typography>
         </Box>
       </Box>
@@ -213,6 +221,21 @@ function Profile() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleFollowingClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Groups Modal */}
+      <Dialog open={groupsOpen} onClose={handleGroupsClose}>
+        <DialogTitle>Your Groups</DialogTitle>
+        <DialogContent>
+          <List>
+            {groups.map((g) => (
+              <ListItem key={g.group_id}>{g.group_name}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleGroupsClose}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

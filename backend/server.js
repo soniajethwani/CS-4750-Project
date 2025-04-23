@@ -725,3 +725,28 @@ app.listen(4000, async () => {
   // Pre-populate ALL exercises from API (only if none exist)
   await populateAllExercises();
 });
+
+// Graceful shutdown on Ctrl+C or kill signal
+process.on('SIGINT', async () => {
+  console.log('\nGracefully shutting down...');
+  try {
+    await pool.end(); // Close all DB connections
+    console.log('Database connections closed.');
+  } catch (err) {
+    console.error('Error closing DB connections:', err);
+  } finally {
+    process.exit(0); // Exit process
+  }
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\nGracefully shutting down...');
+  try {
+    await pool.end(); // Close all DB connections
+    console.log('Database connections closed.');
+  } catch (err) {
+    console.error('Error closing DB connections:', err);
+  } finally {
+    process.exit(0);
+  }
+});
