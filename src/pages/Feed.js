@@ -30,7 +30,7 @@ export default function Feed() {
             <Typography paragraph>{post.caption}</Typography>
 
             {/* workout details */}
-            {post.workout?.exercises.map((ex, i) => (
+            {post.workout?.exercises?.map((ex, i) => (
               <Box key={i} mb={1} p={1} border={1} borderRadius={1}>
                 <Typography><strong>{ex.name}</strong></Typography>
                 <Typography>Weight: {ex.weight}</Typography>
@@ -39,7 +39,7 @@ export default function Feed() {
             ))}
 
             {/* media */}
-            {post.media && post.media.map(m => (
+            {post.media?.map(m => (
               <Box key={m.media_id} mt={2}>
                 {m.media_type === 'image' ? (
                   <img

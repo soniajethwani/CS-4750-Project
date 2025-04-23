@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-const API_KEY = 'J5k7pCx4VWtCcJa4+fFrTQ==yG0hHk7v078dgHNj';
-const BASE_URL = 'https://api.api-ninjas.com/v1/exercises';
+const BASE_URL = 'http://localhost:4000/api/exercises';
 
 export const fetchExercises = async (params = {}) => {
   try {
+    const token = localStorage.getItem('token');
     const response = await axios.get(BASE_URL, {
-      params,
-      headers: { 'X-Api-Key': API_KEY }
+      headers: { Authorization: `Bearer ${token}` },
+      params
     });
     return response.data;
   } catch (error) {

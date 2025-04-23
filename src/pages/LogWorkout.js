@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, TextField, Select, MenuItem, Box, Typography, Chip } from '@mui/material';
 import { fetchExercises } from '../services/exerciseApi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 function LogWorkout() {
@@ -11,6 +11,10 @@ function LogWorkout() {
   const [caption, setCaption] = useState('');
   const [media, setMedia] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const groupId = params.get('groupId');
+
 
   // Fetch exercises when search params change
   useEffect(() => {
@@ -46,6 +50,7 @@ function LogWorkout() {
       formData.append('caption', caption);
       formData.append('exercises', JSON.stringify(selectedExercises));
       if (media) formData.append('media', media);
+      if (groupId) formData.append('group_id', groupId);
 
       await axios.post('http://localhost:4000/posts', formData, {
         headers: {

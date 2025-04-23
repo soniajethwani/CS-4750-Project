@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Typography, Box, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Button, Typography, Box, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, Link, List, ListItem } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -7,6 +7,12 @@ function Profile() {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
   const [open, setOpen] = useState(false);
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [followingOpen, setFollowingOpen] = useState(false);
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const [groups, setGroups] = useState([]);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -15,6 +21,7 @@ function Profile() {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         setProfileData(response.data);
+        setGroups(response.data.groups); 
       } catch (error) {
         console.error('Error fetching profile:', error);
       }
@@ -35,12 +42,54 @@ function Profile() {
     setOpen(false);
   };
 
+  const handleFollowersOpen = async () => {
+    setFollowersOpen(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:4000/followers', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFollowers(res.data);
+    } catch (err) {
+      console.error('Failed to fetch followers:', err);
+    }
+  };
+
+  const handleFollowingOpen = async () => {
+    setFollowingOpen(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:4000/following', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFollowing(res.data);
+    } catch (err) {
+      console.error('Failed to fetch following:', err);
+    }
+  };
+
+  const handleGroupsOpen = () => {
+    setGroupsOpen(true);
+  };
+
+  const handleGroupsClose = () => {
+    setGroupsOpen(false)
+  };
+
+  const handleFollowersClose = () => {
+    setFollowersOpen(false)
+  };
+
+  const handleFollowingClose = () => {
+    setFollowingOpen(false)
+  };
+
   if (!profileData) return <div>Loading...</div>;
 
   return (
     <Box p={4}>
       <Box display="flex" justifyContent="space-between" mb={4}>
-        <Typography variant="h3">Welcome, {profileData.profile.username}!</Typography>
+        <Typography variant="h4">{profileData.profile.username}</Typography>
         <Box>
           <Button 
             variant="contained" 
@@ -68,15 +117,41 @@ function Profile() {
         </Box>
       </Box>
 
+      {/* Profile Summary */}
+      <Box display="flex" alignItems="center" mb={3}>
+        {profileData.profile.profile_picture && (
+          <img 
+            src={`data:image/jpeg;base64,${profileData.profile.profile_picture}`} 
+            alt="Profile" 
+            style={{ width: 100, height: 100, borderRadius: '50%', marginRight: 16 }}
+          />
+        )}
+        <Box display="flex" gap={4} mb={1}>
+          <Typography>
+            <strong>Followers:</strong> <Link component="button" onClick={handleFollowersOpen}>{profileData.profile.followers}</Link>
+          </Typography>
+          <Typography>
+            <strong>Following:</strong> <Link component="button" onClick={handleFollowingOpen}>{profileData.profile.following}</Link>
+          </Typography>
+          <Typography>
+            <strong>Groups:</strong> <Link component="button" onClick={handleGroupsOpen}>{groups.length}</Link>
+          </Typography>
+        </Box>
+      </Box>
+      <Box mt={3} mb={4}>
+          <Typography>{profileData.profile.biography || 'No bio yet'}</Typography>
+      </Box>
+   
+
       {/* Posts Section */}
-      {profileData.posts.map((post) => (
+      {(profileData.posts || []).map((post) => (
         <Card key={post.post_id} style={{ marginBottom: '16px' }}>
           <CardContent>
             <Typography variant="h6">{new Date(post.timestamp).toLocaleString()}</Typography>
             <Typography>{post.caption}</Typography>
             
             {/* Display Exercises */}
-            {post.workout && post.workout.exercises.map((exercise, i) => (
+            {post.workout?.exercises?.map((exercise, i) => (
               <Box key={i} p={1} mt={1} border={1} borderRadius={1}>
                 <Typography><strong>{exercise.name}</strong></Typography>
                 <Typography>Weight: {exercise.weight} lbs</Typography>
@@ -86,21 +161,23 @@ function Profile() {
             ))}
             
             {/* Display Media if exists */}
-            {post.media && (
-              <Box mt={2}>
-                {post.media.media_type === 'image' ? (
-                  <img 
-                    src={`data:${post.media.mime_type};base64,${post.media.data}`} 
-                    alt="Workout" 
+            {Array.isArray(post.media) && post.media.map(m => (
+              <Box key={m.media_id} mt={2}>
+                {m.media_type === 'image' ? (
+                  <img
+                    src={`data:${m.mime_type};base64,${m.data}`}
+                    alt="Workout"
                     style={{ maxWidth: '100%' }}
                   />
                 ) : (
                   <video controls style={{ maxWidth: '100%' }}>
-                    <source src={`data:${post.media.mime_type};base64,${post.media.data}`} />
+                    <source src={`data:${m.mime_type};base64,${m.data}`} />
                   </video>
                 )}
               </Box>
-            )}
+            ))}
+            
+
           </CardContent>
         </Card>
       ))}
@@ -118,6 +195,51 @@ function Profile() {
           <Button onClick={handleClose} color="primary">
             Close
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Followers Modal */}
+      <Dialog open={followersOpen} onClose={handleFollowersClose}>
+        <DialogTitle>Followers</DialogTitle>
+        <DialogContent>
+          <List>
+            {followers.map((f) => (
+              <ListItem key={f.user_id}>{f.username}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFollowersClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Following Modal */}
+      <Dialog open={followingOpen} onClose={handleFollowingClose}>
+        <DialogTitle>Following</DialogTitle>
+        <DialogContent>
+          <List>
+            {following.map((f) => (
+              <ListItem key={f.user_id}>{f.username}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFollowingClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Groups Modal */}
+      <Dialog open={groupsOpen} onClose={handleGroupsClose}>
+        <DialogTitle>Your Groups</DialogTitle>
+        <DialogContent>
+          <List>
+            {groups.map((g) => (
+              <ListItem key={g.group_id}>{g.group_name}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleGroupsClose}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

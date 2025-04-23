@@ -12,8 +12,10 @@ import {
   Grid,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { useNavigate } from 'react-router-dom';
 
 export default function Search() {
+  const nav = useNavigate();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState({ users: [], groups: [] });
   const [loading, setLoading] = useState(false);
@@ -96,7 +98,7 @@ export default function Search() {
           <Grid container spacing={2} mt={1}>
             {results.groups.map((g) => (
               <Grid item xs={12} md={6} key={g.group_id}>
-                <Card variant="outlined">
+              <Card onClick={() => nav(`/groups/${g.group_id}`)} variant="outlined">
                   <CardContent>
                     <Typography fontWeight="bold">{g.group_name}</Typography>
                     <Typography noWrap>
