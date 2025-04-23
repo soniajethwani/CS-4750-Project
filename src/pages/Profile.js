@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Typography, Box, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Button, Typography, Box, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, Link, List, ListItem } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -7,6 +7,10 @@ function Profile() {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
   const [open, setOpen] = useState(false);
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [followingOpen, setFollowingOpen] = useState(false);
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -33,6 +37,40 @@ function Profile() {
 
   const handleClose = () => {
     setOpen(false);
+  };
+
+  const handleFollowersOpen = async () => {
+    setFollowersOpen(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:4000/followers', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFollowers(res.data);
+    } catch (err) {
+      console.error('Failed to fetch followers:', err);
+    }
+  };
+
+  const handleFollowingOpen = async () => {
+    setFollowingOpen(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:4000/following', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFollowing(res.data);
+    } catch (err) {
+      console.error('Failed to fetch following:', err);
+    }
+  };
+
+  const handleFollowersClose = () => {
+    setFollowersOpen(false)
+  };
+
+  const handleFollowingClose = () => {
+    setFollowingOpen(false)
   };
 
   if (!profileData) return <div>Loading...</div>;
@@ -67,6 +105,33 @@ function Profile() {
           </Button>
         </Box>
       </Box>
+
+      {/* Profile Summary */}
+      <Box display="flex" alignItems="center" mb={3}>
+        {profileData.profile.profile_picture && (
+          <img 
+            src={`data:image/jpeg;base64,${profileData.profile.profile_picture}`} 
+            alt="Profile" 
+            style={{ width: 100, height: 100, borderRadius: '50%', marginRight: 16 }}
+          />
+        )}
+        <Box>
+          <Typography><strong>Bio:</strong> {profileData.profile.biography || 'No bio yet'}</Typography>
+          <Typography>
+            <strong>Followers:</strong> <Link component="button" onClick={handleFollowersOpen}>{profileData.profile.followers}</Link>
+          </Typography>
+          <Typography>
+            <strong>Following:</strong> <Link component="button" onClick={handleFollowingOpen}>{profileData.profile.following}</Link>
+          </Typography>
+          <Typography>
+            <strong>Groups:</strong>{" "}
+            {profileData.groups.length > 0
+              ? profileData.groups.map((g, i) => g.group_name).join(", ")
+              : "No group memberships"}
+          </Typography>
+        </Box>
+      </Box>
+
 
       {/* Posts Section */}
       {profileData.posts.map((post) => (
@@ -118,6 +183,36 @@ function Profile() {
           <Button onClick={handleClose} color="primary">
             Close
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Followers Modal */}
+      <Dialog open={followersOpen} onClose={handleFollowersClose}>
+        <DialogTitle>Followers</DialogTitle>
+        <DialogContent>
+          <List>
+            {followers.map((f) => (
+              <ListItem key={f.user_id}>{f.username}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFollowersClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Following Modal */}
+      <Dialog open={followingOpen} onClose={handleFollowingClose}>
+        <DialogTitle>Following</DialogTitle>
+        <DialogContent>
+          <List>
+            {following.map((f) => (
+              <ListItem key={f.user_id}>{f.username}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFollowingClose}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

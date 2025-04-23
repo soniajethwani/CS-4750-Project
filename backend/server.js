@@ -357,11 +357,20 @@ app.post("/posts", authenticateToken, upload.single('media'), async (req, res) =
 app.get("/fullprofile", authenticateToken, async (req, res) => {
   try {
     // Get user profile
-    const profileRes = await pool.query(
-      "SELECT user_id, username, profile_picture, biography, privacy_setting FROM users WHERE user_id = $1",
-      [req.user.id]
-    );
-    
+
+    const profileRes = await pool.query(`
+      SELECT user_id, username, profile_picture, biography, privacy_setting,
+        (SELECT COUNT(*) FROM followers WHERE followed_user_id = $1) AS followers,
+        (SELECT COUNT(*) FROM followers WHERE follower_user_id = $1) AS following
+      FROM users WHERE user_id = $1
+    `, [req.user.id]);
+
+    const groupsRes = await pool.query(`
+      SELECT g.group_id, g.group_name FROM groups g
+      JOIN group_members gm ON gm.group_id = g.group_id
+      WHERE gm.user_id = $1
+    `, [req.user.id]);
+
     if (profileRes.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -406,12 +415,48 @@ app.get("/fullprofile", authenticateToken, async (req, res) => {
 
     res.json({
       profile: profileRes.rows[0],
+      groups: groupsRes.rows,
       posts: postsRes.rows
     });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// Get list of followers
+app.get("/followers", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.user_id, u.username
+      FROM followers f
+      JOIN users u ON f.follower_user_id = u.user_id
+      WHERE f.followed_user_id = $1
+      ORDER BY u.username
+    `, [req.user.id]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Failed to fetch followers:", err);
+    res.status(500).json({ error: "Failed to fetch followers" });
+  }
+});
+
+// Get list of users the current user is following
+app.get("/following", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.user_id, u.username
+      FROM followers f
+      JOIN users u ON f.followed_user_id = u.user_id
+      WHERE f.follower_user_id = $1
+      ORDER BY u.username
+    `, [req.user.id]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Failed to fetch following:", err);
+    res.status(500).json({ error: "Failed to fetch following" });
+  }
+});
+
 
 // Single exercise endpoint that combines DB and API results
 app.get("/api/exercises", authenticateToken, async (req, res) => {
