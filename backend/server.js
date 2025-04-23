@@ -870,6 +870,76 @@ app.get("/users/:id", authenticateToken, async (req, res) => {
   }
 });
 
+// send follow request
+app.post("/follow/:targetId", authenticateToken, async (req, res) => {
+  const { targetId } = req.params;
+  const requesterId = req.user.id;
+
+  const userRes = await pool.query(`SELECT privacy_setting FROM users WHERE user_id = $1`, [targetId]);
+  const privacy = userRes.rows[0]?.privacy_setting;
+
+  if (privacy === "public") {
+    await pool.query(`INSERT INTO followers (follower_user_id, followed_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [requesterId, targetId]);
+    return res.sendStatus(204);
+  } else {
+    await pool.query(`INSERT INTO follow_requests (requester_id, target_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [requesterId, targetId]);
+    return res.status(202).json({ message: "Request sent" });
+  }
+});
+
+// view requests
+app.get("/follow-requests", authenticateToken, async (req, res) => {
+  const requests = await pool.query(`
+    SELECT u.user_id, u.username FROM follow_requests fr
+    JOIN users u ON fr.requester_id = u.user_id
+    WHERE fr.target_id = $1
+  `, [req.user.id]);
+  res.json(requests.rows);
+});
+
+// accept request
+app.post("/follow-requests/:requesterId/accept", authenticateToken, async (req, res) => {
+  const { requesterId } = req.params;
+  const targetId = req.user.id;
+  await pool.query('BEGIN');
+  await pool.query(`DELETE FROM follow_requests WHERE requester_id = $1 AND target_id = $2`, [requesterId, targetId]);
+  await pool.query(`INSERT INTO followers (follower_user_id, followed_user_id) VALUES ($1, $2)`, [requesterId, targetId]);
+  await pool.query('COMMIT');
+  res.sendStatus(200);
+});
+
+//decline request
+app.delete("/follow-requests/:requesterId/decline", authenticateToken, async (req, res) => {
+  await pool.query(`DELETE FROM follow_requests WHERE requester_id = $1 AND target_id = $2`, [req.params.requesterId, req.user.id]);
+  res.sendStatus(204);
+});
+
+// check is following
+app.get("/is-following/:id", authenticateToken, async (req, res) => {
+  const result = await pool.query(
+    `SELECT 1 FROM followers WHERE follower_user_id = $1 AND followed_user_id = $2`,
+    [req.user.id, req.params.id]
+  );
+  res.json({ isFollowing: result.rows.length > 0 });
+});
+
+//unfollow
+app.post("/unfollow/:id", authenticateToken, async (req, res) => {
+  await pool.query(
+    `DELETE FROM followers WHERE follower_user_id = $1 AND followed_user_id = $2`,
+    [req.user.id, req.params.id]
+  );
+  res.sendStatus(204);
+});
+
+//check pending
+app.get("/is-pending/:id", authenticateToken, async (req, res) => {
+  const result = await pool.query(
+    `SELECT 1 FROM follow_requests WHERE requester_id = $1 AND target_id = $2`,
+    [req.user.id, req.params.id]
+  );
+  res.json({ pending: result.rows.length > 0 });
+});
 
 // Initialize server
 app.listen(4000, async () => {
