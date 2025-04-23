@@ -254,16 +254,16 @@ app.post("/posts", authenticateToken, upload.single('media'), async (req, res) =
   try {
     await client.query('BEGIN');
     
-    const { caption, exercises } = req.body;
+    const { caption, exercises, group_id } = req.body;
     const userId = req.user.id;
     const parsedExercises = JSON.parse(exercises);
 
     // Create post
     const postInsert = await client.query(
-      `INSERT INTO posts (user_id, caption) 
-       VALUES ($1, $2) 
+      `INSERT INTO posts (user_id, caption, group_id) 
+       VALUES ($1, $2, $3) 
        RETURNING post_id, timestamp`,
-      [userId, caption]
+      [userId, caption, group_id || null]
     );
     const { post_id, timestamp } = postInsert.rows[0];
 
@@ -423,7 +423,7 @@ app.get("/api/exercises", authenticateToken, async (req, res) => {
     const dbExercises = await pool.query(
       `SELECT exercise_id, name, target_muscle, equipment 
        FROM exercises 
-       WHERE created_by IS NULL OR created_by = $1
+       WHERE (created_by IS NULL OR created_by = $1)
        ${muscle ? 'AND target_muscle = $2' : ''}
        ORDER BY name`,
       muscle ? [userId, muscle] : [userId]
@@ -667,6 +667,123 @@ app.get("/groups/feed", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("Groups feed error:", err);
     res.status(500).json({ error: "Failed to fetch group feed" });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /groups/:id/join
+app.post("/groups/:id/join", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO group_members (group_id, user_id)
+       VALUES ($1, $2)`,
+      [req.params.id, req.user.id]
+    );
+    res.sendStatus(204);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: "Already a member or invalid group" });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /groups/:id/leave
+app.post("/groups/:id/leave", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `DELETE FROM group_members 
+       WHERE group_id = $1 AND user_id = $2`,
+      [req.params.id, req.user.id]
+    );
+    res.sendStatus(204);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: "Could not leave group" });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /groups/:id — full group profile
+app.get("/groups/:id", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const gid = req.params.id;
+    const uid = req.user.id;
+
+    // 1) group meta + membership status + counts
+    const grpRes = await client.query(
+      `SELECT 
+         g.*,
+         (SELECT COUNT(*) FROM group_members WHERE group_id = $1) AS member_count,
+         EXISTS(
+           SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2
+         ) AS is_member
+       FROM groups g
+       WHERE g.group_id = $1`,
+      [gid, uid]
+    );
+    if (!grpRes.rows.length) return res.sendStatus(404);
+    const group = grpRes.rows[0];
+
+    // 2) list of members
+    const memRes = await client.query(
+      `SELECT u.user_id, u.username, u.profile_picture
+       FROM users u
+       JOIN group_members gm ON u.user_id = gm.user_id
+       WHERE gm.group_id = $1`,
+      [gid]
+    );
+
+    // 3) group-only posts
+    const postsRes = await client.query(
+      `SELECT p.*, u.username, 
+              json_agg(DISTINCT jsonb_build_object(
+                'media_id', m.media_id,
+                'media_type', m.media_type,
+                'mime_type', m.mime_type,
+                'file_size', m.file_size,
+                'data', m.media_data
+              )) AS media,
+              (SELECT json_build_object(
+                 'workout_id', w.workout_id,
+                 'date', w.date,
+                 'exercises', (
+                   SELECT json_agg(
+                     json_build_object(
+                       'name', e.name,
+                       'target_muscle', e.target_muscle,
+                       'weight', we.weight,
+                       'reps', we.reps,
+                       'sets', we.sets
+                     )
+                   )
+                   FROM workout_exercises we
+                   JOIN exercises e ON we.exercise_id = e.exercise_id
+                   WHERE we.workout_id = w.workout_id
+                 )
+               ) FROM workout w WHERE w.post_id = p.post_id) AS workout
+       FROM posts p
+       JOIN users u    ON p.user_id = u.user_id
+       LEFT JOIN media m ON p.post_id = m.post_id
+       WHERE p.group_id = $1
+       GROUP BY p.post_id, u.username
+       ORDER BY p.timestamp DESC`,
+      [gid]
+    );
+
+    res.json({
+      group,
+      members: memRes.rows,
+      posts: postsRes.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Could not load group profile" });
   } finally {
     client.release();
   }

@@ -69,14 +69,14 @@ function Profile() {
       </Box>
 
       {/* Posts Section */}
-      {profileData.posts.map((post) => (
+      {(profileData.posts || []).map((post) => (
         <Card key={post.post_id} style={{ marginBottom: '16px' }}>
           <CardContent>
             <Typography variant="h6">{new Date(post.timestamp).toLocaleString()}</Typography>
             <Typography>{post.caption}</Typography>
             
             {/* Display Exercises */}
-            {post.workout && post.workout.exercises.map((exercise, i) => (
+            {post.workout?.exercises?.map((exercise, i) => (
               <Box key={i} p={1} mt={1} border={1} borderRadius={1}>
                 <Typography><strong>{exercise.name}</strong></Typography>
                 <Typography>Weight: {exercise.weight} lbs</Typography>
@@ -86,21 +86,23 @@ function Profile() {
             ))}
             
             {/* Display Media if exists */}
-            {post.media && (
-              <Box mt={2}>
-                {post.media.media_type === 'image' ? (
-                  <img 
-                    src={`data:${post.media.mime_type};base64,${post.media.data}`} 
-                    alt="Workout" 
+            {Array.isArray(post.media) && post.media.map(m => (
+              <Box key={m.media_id} mt={2}>
+                {m.media_type === 'image' ? (
+                  <img
+                    src={`data:${m.mime_type};base64,${m.data}`}
+                    alt="Workout"
                     style={{ maxWidth: '100%' }}
                   />
                 ) : (
                   <video controls style={{ maxWidth: '100%' }}>
-                    <source src={`data:${post.media.mime_type};base64,${post.media.data}`} />
+                    <source src={`data:${m.mime_type};base64,${m.data}`} />
                   </video>
                 )}
               </Box>
-            )}
+            ))}
+            
+
           </CardContent>
         </Card>
       ))}
