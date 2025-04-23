@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { Box, Typography, Avatar, Grid, Card, CardContent, Button } from "@mui/material";
+import { Box, Typography, Avatar, Grid, Card, CardContent, Button, Link, ListItem, Dialog, List, DialogTitle, DialogContent } from "@mui/material";
 
 export default function UserProfile() {
   const { id } = useParams();
@@ -10,7 +10,11 @@ export default function UserProfile() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [pendingRequest, setPendingRequest] = useState(false);
-
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [followingOpen, setFollowingOpen] = useState(false);
+  
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -45,7 +49,7 @@ export default function UserProfile() {
     };
     if (id) checkPendingRequest();
   }, [id]);
-  
+
   if (!profile) return <Typography>Loading…</Typography>;
   
   const toggleFollow = async () => {
@@ -64,6 +68,24 @@ export default function UserProfile() {
       }
     }
   };
+
+  const fetchFollowData = async () => {
+    const res = await axios.get(`http://localhost:4000/user-follow-data/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    });
+    setFollowers(res.data.followers);
+    setFollowing(res.data.following);
+  };
+  
+  const handleFollowersOpen = async () => {
+    await fetchFollowData();
+    setFollowersOpen(true);
+  };
+  
+  const handleFollowingOpen = async () => {
+    await fetchFollowData();
+    setFollowingOpen(true);
+  };
   
   
   return (
@@ -80,8 +102,21 @@ export default function UserProfile() {
         <Box>
           <Typography variant="h5">{profile.username}</Typography>
           <Typography color="text.secondary">
-            {profile.follower_count} followers • {profile.following_count} following
-          </Typography>
+            {(profile.privacy_setting === "public" || isFollowing) && !pendingRequest ? (
+                <>
+                <Link component="button" onClick={handleFollowersOpen}>
+                    {profile.follower_count} followers
+                </Link> •{" "}
+                <Link component="button" onClick={handleFollowingOpen}>
+                    {profile.following_count} following
+                </Link>
+                </>
+            ) : (
+                <>
+                {profile.follower_count} followers • {profile.following_count} following
+                </>
+            )}
+            </Typography>
           <Typography mt={1}>{profile.biography || "No bio provided."}</Typography>
         </Box>
 
@@ -123,6 +158,31 @@ export default function UserProfile() {
             )}
         </Box>
         )}
+        <Dialog open={followersOpen} onClose={() => setFollowersOpen(false)}>
+            <DialogTitle>Followers</DialogTitle>
+            <DialogContent>
+                <List>
+                {followers.map(f => (
+                    <ListItem key={f.user_id}>
+                    <Typography>{f.username}</Typography>
+                    </ListItem>
+                ))}
+                </List>
+            </DialogContent>
+            </Dialog>
+
+            <Dialog open={followingOpen} onClose={() => setFollowingOpen(false)}>
+            <DialogTitle>Following</DialogTitle>
+            <DialogContent>
+                <List>
+                {following.map(f => (
+                    <ListItem key={f.user_id}>
+                    <Typography>{f.username}</Typography>
+                    </ListItem>
+                ))}
+                </List>
+            </DialogContent>
+            </Dialog>
     </Box>
   );
 }

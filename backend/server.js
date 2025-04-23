@@ -941,6 +941,36 @@ app.get("/is-pending/:id", authenticateToken, async (req, res) => {
   res.json({ pending: result.rows.length > 0 });
 });
 
+app.get("/user-follow-data/:id", authenticateToken, async (req, res) => {
+  const targetId = req.params.id;
+  const requesterId = req.user.id;
+
+  const privacyRes = await pool.query(`SELECT privacy_setting FROM users WHERE user_id = $1`, [targetId]);
+  const privacy = privacyRes.rows[0]?.privacy_setting;
+
+  const isFollowingRes = await pool.query(`
+    SELECT 1 FROM followers WHERE follower_user_id = $1 AND followed_user_id = $2
+  `, [requesterId, targetId]);
+
+  const isAllowed = privacy === "public" || isFollowingRes.rows.length > 0 || requesterId === parseInt(targetId);
+
+  if (!isAllowed) return res.status(403).json({ error: "Access denied" });
+
+  const followers = await pool.query(`
+    SELECT u.user_id, u.username FROM followers f
+    JOIN users u ON u.user_id = f.follower_user_id
+    WHERE f.followed_user_id = $1
+  `, [targetId]);
+
+  const following = await pool.query(`
+    SELECT u.user_id, u.username FROM followers f
+    JOIN users u ON u.user_id = f.followed_user_id
+    WHERE f.follower_user_id = $1
+  `, [targetId]);
+
+  res.json({ followers: followers.rows, following: following.rows });
+});
+
 // Initialize server
 app.listen(4000, async () => {
   console.log("Backend server running on port 4000");
