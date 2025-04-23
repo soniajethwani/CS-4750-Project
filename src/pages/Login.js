@@ -10,6 +10,21 @@ function Login() {
 
   const handleRegister = async () => {
     try {
+      // check username length
+      if(username.length <3){
+        // post error to require more 
+        alert("Username must contain at least three letters");
+        return;
+      }
+      const regex = /^(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]+$/;
+
+      // check password length
+      if(password.length <=3 || regex.test(password)){
+        // post error about password requirement
+        alert("Password must contain at least one number, at least one uppercase, and at least one lowercase letter");
+        return;
+      }
+
       await axios.post("http://localhost:4000/register", { username, password });
       alert("Registered successfully!");
     } catch (err) {
