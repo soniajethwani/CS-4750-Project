@@ -168,14 +168,15 @@ function Profile() {
               return(
               <Box key={m.media_id} mt={2}>
                 {m.media_type === 'image' ? (
+                  (console.log("TYPE: ", m.mime_type), (
                   <img
                     src={`data:${m.mime_type};base64,${m.data}`}
                     alt="Workout"
                     style={{ maxWidth: "100%", borderRadius: "8px" }}
                   />
-                ) : (
+                ))) : (
                   <video controls style={{ maxWidth: '100%' }}>
-                    <source src={`data:${m.mime_type};base64,${m.data}`} />
+                    <source src={`data:${m.mime_type};base64,${m.data}`} type={m.mime_type} />
                   </video>
                 )}
               </Box>

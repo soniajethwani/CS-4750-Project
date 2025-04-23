@@ -175,10 +175,12 @@ function LogWorkout() {
         />
         <input
           type="file"
-          accept="image/*,video/*"
+          accept="image/*,video/mp4,video/webm"
           onChange={(e) => setMedia(e.target.files[0])}
-          style={{ marginTop: '16px' }}
-        />
+          />
+          <small style={{ display: 'block', marginTop: '0.5em'}}>
+            Accepted file types: JPG, PNG, GIF, MP4, WebM
+          </small>
       </Box>
 
       <Button 
