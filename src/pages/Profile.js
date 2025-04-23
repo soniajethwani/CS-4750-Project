@@ -161,13 +161,17 @@ function Profile() {
             ))}
             
             {/* Display Media if exists */}
-            {Array.isArray(post.media) && post.media.map(m => (
+            {Array.isArray(post.media) && post.media.length > 0 && post.media.some(m => m.data) && post.media.map(m => {
+              //console.log('Media Data:', m.data);
+              //console.log('Media MIME Type:', m.mime_type);
+              
+              return(
               <Box key={m.media_id} mt={2}>
                 {m.media_type === 'image' ? (
                   <img
                     src={`data:${m.mime_type};base64,${m.data}`}
                     alt="Workout"
-                    style={{ maxWidth: '100%' }}
+                    style={{ maxWidth: "100%", borderRadius: "8px" }}
                   />
                 ) : (
                   <video controls style={{ maxWidth: '100%' }}>
@@ -175,7 +179,8 @@ function Profile() {
                   </video>
                 )}
               </Box>
-            ))}
+              );
+            })}
             
 
           </CardContent>

@@ -39,7 +39,7 @@ export default function Feed() {
             ))}
 
             {/* media */}
-            {post.media?.map(m => (
+            {Array.isArray(post.media) && post.media.length > 0 && post.media.some(m => m.data) && post.media.map(m => (
               <Box key={m.media_id} mt={2}>
                 {m.media_type === 'image' ? (
                   <img

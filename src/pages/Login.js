@@ -19,7 +19,7 @@ function Login() {
       const regex = /^(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]+$/;
 
       // check password length
-      if(password.length <=3 || regex.test(password)){
+      if(password.length <=3 || !regex.test(password)){
         // post error about password requirement
         alert("Password must contain at least one number, at least one uppercase, and at least one lowercase letter");
         return;

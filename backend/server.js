@@ -19,7 +19,7 @@ const pool = new Pool({
 
 const SECRET = process.env.JWT_SECRET;
 
-// Helper function to convert file to Base64
+//Helper function to convert file to Base64
 const fileToBase64 = (file) => {
   return new Promise((resolve, reject) => {
     const fs = require('fs');
@@ -40,7 +40,7 @@ async function getPostById(client, post_id) {
          'media_type', m.media_type,
          'mime_type', m.mime_type,
          'file_size', m.file_size,
-         'data', m.media_data
+         'data', encode(m.media_data, 'base64')
        )
      ) as media,
      (SELECT json_build_object(
@@ -214,7 +214,7 @@ app.get("/posts", authenticateToken, async (req, res) => {
            'media_type', m.media_type,
            'mime_type', m.mime_type,
            'file_size', m.file_size,
-           'data', m.media_data
+           'data', encode(m.media_data, 'base64')
          )
        ) as media,
        (SELECT json_build_object(
@@ -331,7 +331,10 @@ app.post("/posts", authenticateToken, upload.single('media'), async (req, res) =
 
     // Handle media
     if (req.file) {
-      const mediaData = await fileToBase64(req.file);
+      //const mediaData = await fileToBase64(req.file);
+      //console.log("CLEANED DATA: ", mediaData);
+      const fs = require('fs');
+      const mediaData = fs.readFileSync(req.file.path);
       const fileType = req.file.mimetype.startsWith('image') ? 'image' : 'video';
       
       await client.query(
@@ -384,7 +387,7 @@ app.get("/fullprofile", authenticateToken, async (req, res) => {
            'media_type', m.media_type,
            'mime_type', m.mime_type,
            'file_size', m.file_size,
-           'data', m.media_data
+           'data', encode(m.media_data, 'base64')
          )
        ) as media,
        (SELECT json_build_object(
@@ -412,7 +415,6 @@ app.get("/fullprofile", authenticateToken, async (req, res) => {
        ORDER BY p.timestamp DESC`,
       [req.user.id]
     );
-
     res.json({
       profile: profileRes.rows[0],
       groups: groupsRes.rows,
@@ -505,7 +507,7 @@ app.get("/feed", authenticateToken, async (req, res) => {
                 'media_type', m.media_type,
                 'mime_type', m.mime_type,
                 'file_size', m.file_size,
-                'data', m.media_data
+                'data', encode(m.media_data, 'base64')
               )) AS media,
               (SELECT json_build_object(
                  'workout_id', w.workout_id,
@@ -677,7 +679,7 @@ app.get("/groups/feed", authenticateToken, async (req, res) => {
                 'media_type', m.media_type,
                 'mime_type', m.mime_type,
                 'file_size', m.file_size,
-                'data', m.media_data
+                'data', encode(m.media_data, 'base64')
               )) AS media,
               (SELECT json_build_object(
                  'workout_id', w.workout_id,
@@ -792,7 +794,7 @@ app.get("/groups/:id", authenticateToken, async (req, res) => {
                 'media_type', m.media_type,
                 'mime_type', m.mime_type,
                 'file_size', m.file_size,
-                'data', m.media_data
+                'data', encode(m.media_data, 'base64')
               )) AS media,
               (SELECT json_build_object(
                  'workout_id', w.workout_id,
