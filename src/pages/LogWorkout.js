@@ -45,6 +45,29 @@ function LogWorkout() {
   };
 
   const handleSubmit = async () => {
+    for (const ex of selectedExercises) {
+      const weight = Number(ex.weight);
+      const reps = Number(ex.reps);
+      const sets = Number(ex.sets);
+
+      console.log(weight);
+      console.log(reps);
+      console.log(sets);
+  
+      if (isNaN(weight) || isNaN(reps) || isNaN(sets) || weight < 0 || reps <= 0 || sets <= 0) {
+        alert("Please ensure all exercises have positive numbers for weight, reps, and sets.");
+        return;
+      }
+      if(weight === 0){
+        ex.weight = "body weight"
+        console.log(true);
+      }
+
+      console.log(ex.weight);
+      console.log(ex.reps);
+      console.log(ex.sets);
+    }
+
     try {
       const formData = new FormData();
       formData.append('caption', caption);
