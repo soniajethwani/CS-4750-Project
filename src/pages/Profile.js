@@ -14,6 +14,7 @@ function Profile() {
   const [groupsOpen, setGroupsOpen] = useState(false);
   const [groups, setGroups] = useState([]);
   const [followRequests, setFollowRequests] = useState([]);
+  const [requestsOpen, setRequestsOpen] = useState(false);
 
 
   useEffect(() => {
@@ -76,11 +77,22 @@ function Profile() {
     }
   };
   const accept = async (uid) => {
-    await axios.post(`http://localhost:4000/follow-requests/${uid}/accept`, {}, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-    });
-    setFollowRequests(prev => prev.filter(r => r.user_id !== uid));
-  };
+      await axios.post(`http://localhost:4000/follow-requests/${uid}/accept`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+    
+      setFollowRequests(prev => prev.filter(r => r.user_id !== uid));
+    
+      try {
+        const response = await axios.get('http://localhost:4000/fullprofile', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setProfileData(response.data);
+      } catch (err) {
+        console.error("Failed to refresh profile data:", err);
+      }
+    };
+  
   
   const decline = async (uid) => {
     await axios.delete(`http://localhost:4000/follow-requests/${uid}/decline`, {
@@ -88,7 +100,7 @@ function Profile() {
     });
     setFollowRequests(prev => prev.filter(r => r.user_id !== uid));
   };
-  
+
   const handleGroupsOpen = () => {
     setGroupsOpen(true);
   };
@@ -122,11 +134,19 @@ function Profile() {
           </Button>
           <Button 
             variant="contained" 
-            color="secondary"
+            color="primary"
             onClick={() => navigate('/log-workout')}
             style={{ marginRight: '16px' }}
           >
             Log Workout
+          </Button>
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={() => setRequestsOpen(true)}
+            style={{ marginRight: '16px' }}
+          >
+            View Requests
           </Button>
           <Button 
             variant="contained" 
@@ -158,20 +178,6 @@ function Profile() {
             <strong>Groups:</strong> <Link component="button" onClick={handleGroupsOpen}>{groups.length}</Link>
           </Typography>
         </Box>
-        {followRequests.length > 0 && (
-          <Box mb={2}>
-            <Typography variant="h6">Follow Requests</Typography>
-            {followRequests.map(req => (
-              <Box key={req.user_id} display="flex" justifyContent="space-between" mt={1}>
-                <Typography>{req.username}</Typography>
-                <Box>
-                  <Button onClick={() => accept(req.user_id)} color="success">Accept</Button>
-                  <Button onClick={() => decline(req.user_id)} color="error">Decline</Button>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
       </Box>
       <Box mt={3} mb={4}>
           <Typography>{profileData.profile.biography || 'No bio yet'}</Typography>
@@ -306,6 +312,31 @@ function Profile() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleGroupsClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View requests modal */}
+      <Dialog open={requestsOpen} onClose={() => setRequestsOpen(false)}>
+        <DialogTitle>Follow Requests</DialogTitle>
+        <DialogContent>
+          {followRequests.length === 0 ? (
+            <Typography>No pending requests.</Typography>
+          ) : (
+            <List>
+              {followRequests.map(req => (
+                <ListItem key={req.user_id} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography>{req.username}</Typography>
+                  <Box>
+                    <Button size="small" color="success" onClick={() => accept(req.user_id)}>Accept</Button>
+                    <Button size="small" color="error" onClick={() => decline(req.user_id)}>Decline</Button>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRequestsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>
