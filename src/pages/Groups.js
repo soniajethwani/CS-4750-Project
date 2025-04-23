@@ -1,5 +1,6 @@
 // src/pages/Groups.js
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   Box,
@@ -22,6 +23,7 @@ export default function Groups() {
   const [myGroups, setMyGroups] = useState([]);
   const [feed, setFeed] = useState([]);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   // form fields for new group
   const [groupName, setGroupName] = useState("");
@@ -32,16 +34,22 @@ export default function Groups() {
     const loadData = async () => {
       const token = localStorage.getItem("token");
       // fetch membership list
-      const [listRes, feedRes] = await Promise.all([
+      try {
+        const [listRes, feedRes] = await Promise.all([
         axios.get("http://localhost:4000/groups", {
-          headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get("http://localhost:4000/groups/feed", {
-          headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` },
         }),
-      ]);
-      setMyGroups(listRes.data);
-      setFeed(feedRes.data);
+        ]);
+        setMyGroups(listRes.data);
+        setFeed(feedRes.data);
+      } catch (err) {
+        console.error("Failed to load groups or feed:", err);
+        setMyGroups([]);
+        setFeed([]);
+      }
     };
     loadData();
   }, []);
@@ -95,7 +103,7 @@ export default function Groups() {
             key={g.group_id}
             label={g.group_name}
             clickable
-            onClick={() => {}}
+            onClick={() => navigate(`/groups/${g.group_id}`)}
             sx={{ mr: 1, mb: 1 }}
           />
         ))}
@@ -156,7 +164,7 @@ export default function Groups() {
                 {new Date(post.timestamp).toLocaleString()}
               </Typography>
               <Typography paragraph>{post.caption}</Typography>
-              {post.workout?.exercises.map((ex, i) => (
+              {post.workout?.exercises?.map((ex, i) => (
                 <Box key={i} mb={1} p={1} border={1} borderRadius={1}>
                   <Typography>
                     <strong>{ex.name}</strong>

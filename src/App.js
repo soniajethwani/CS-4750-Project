@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import LogWorkout from "./pages/LogWorkout";
 import Groups from "./pages/Groups";
 import Layout from "./components/Layout";
+import GroupProfile from "./pages/GroupProfile";
 
 function App() {
   return (
@@ -19,7 +20,7 @@ function App() {
           <Route path="/log-workout" element={<LogWorkout />} />
           <Route path="/groups" element={<Groups />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/search" element={<div>Search coming soon…</div>} />
+          <Route path="/groups/:id" element={<GroupProfile />} />
         </Route>
       </Routes>
     </Router>
