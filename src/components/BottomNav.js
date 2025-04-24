@@ -4,8 +4,8 @@ import { BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import SearchIcon from '@mui/icons-material/Search';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import PersonIcon from '@mui/icons-material/Person';
 import GroupIcon from '@mui/icons-material/Group';
+import PersonIcon from '@mui/icons-material/Person';
 
 export default function BottomNav() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function BottomNav() {
     '/groups': 3,
     '/profile': 4,
   };
-  const [value, setValue] = React.useState(mapping[location.pathname] || 0);
+  const [value, setValue] = React.useState(mapping[location.pathname] ?? 0);
 
   const handleChange = (_, newValue) => {
     setValue(newValue);
@@ -26,8 +26,8 @@ export default function BottomNav() {
   };
 
   return (
-    <Paper 
-      sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} 
+    <Paper
+      sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }}
       elevation={3}
     >
       <BottomNavigation value={value} onChange={handleChange}>

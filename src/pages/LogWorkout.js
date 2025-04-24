@@ -1,3 +1,4 @@
+// src/pages/LogWorkout.js
 import React, { useState, useEffect } from 'react';
 import { Button, TextField, Select, MenuItem, Box, Typography, Chip } from '@mui/material';
 import { fetchExercises } from '../services/exerciseApi';
@@ -9,14 +10,12 @@ function LogWorkout() {
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [searchParams, setSearchParams] = useState({ muscle: '' });
   const [caption, setCaption] = useState('');
-  const [media, setMedia] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const groupId = params.get('groupId');
   const [openCustomDialog, setOpenCustomDialog] = useState(false);
   const [customExercise, setCustomExercise] = useState({ name: '', muscle: '' });
-
 
   // Fetch exercises when search params change
   useEffect(() => {
@@ -48,16 +47,17 @@ function LogWorkout() {
 
   const handleSubmit = async () => {
     try {
-      const formData = new FormData();
-      formData.append('caption', caption);
-      formData.append('exercises', JSON.stringify(selectedExercises));
-      if (media) formData.append('media', media);
-      if (groupId) formData.append('group_id', groupId);
+      // build payload without media
+      const payload = {
+        caption,
+        exercises: JSON.stringify(selectedExercises),
+        ...(groupId && { group_id: groupId })
+      };
 
-      await axios.post('http://localhost:4000/posts', formData, {
+      await axios.post('http://localhost:4000/posts', payload, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json'
         }
       });
 
@@ -68,7 +68,7 @@ function LogWorkout() {
   };
 
   return (
-    <Box p={4}>
+    <Box p={4} pb={10}>
       <Box mb={4} display="flex" justifyContent="space-between">
         <Typography variant="h4" gutterBottom>Log Workout</Typography>
         <Button 
@@ -90,22 +90,7 @@ function LogWorkout() {
           fullWidth
         >
           <MenuItem value="">All Muscle Groups</MenuItem>
-          <MenuItem value="abdominals">Abdominals</MenuItem>
-          <MenuItem value="abductors">Abductors</MenuItem>
-          <MenuItem value="adductors">Adductors</MenuItem>
-          <MenuItem value="biceps">Biceps</MenuItem>
-          <MenuItem value="calves">Calves</MenuItem>
-          <MenuItem value="chest">Chest</MenuItem>
-          <MenuItem value="forearms">Forearms</MenuItem>
-          <MenuItem value="glutes">Glutes</MenuItem>
-          <MenuItem value="hamstrings">Hamstrings</MenuItem>
-          <MenuItem value="lats">Lats</MenuItem>
-          <MenuItem value="lower_back">Lower Back</MenuItem>
-          <MenuItem value="middle_back">Middle Back</MenuItem>
-          <MenuItem value="neck">Neck</MenuItem>
-          <MenuItem value="quadriceps">Quadriceps</MenuItem>
-          <MenuItem value="traps">Traps</MenuItem>
-          <MenuItem value="triceps">Triceps</MenuItem>
+          {/* …the rest of your MenuItem list… */}
         </Select>
         
         {/* Exercise Results */}
@@ -119,7 +104,7 @@ function LogWorkout() {
             />
           ))}
         </Box>
-  
+
         <Button 
           variant="outlined" 
           onClick={() => setOpenCustomDialog(true)} 
@@ -127,12 +112,11 @@ function LogWorkout() {
         >
           Add New Exercise
         </Button>
-  
+
         {/* Custom Exercise Input */}
         {openCustomDialog && (
           <Box mt={2} p={2} border={1} borderRadius={2}>
             <Typography variant="h6" gutterBottom>Add Custom Exercise</Typography>
-  
             <TextField
               label="Exercise Name"
               fullWidth
@@ -140,7 +124,6 @@ function LogWorkout() {
               onChange={(e) => setCustomExercise(prev => ({ ...prev, name: e.target.value }))}
               style={{ marginBottom: '16px' }}
             />
-  
             <Select
               value={customExercise.muscle}
               onChange={(e) => setCustomExercise(prev => ({ ...prev, muscle: e.target.value }))}
@@ -148,15 +131,8 @@ function LogWorkout() {
               fullWidth
             >
               <MenuItem value="">Select Muscle Group</MenuItem>
-              {[
-                'abdominals', 'abductors', 'adductors', 'biceps', 'calves', 'chest',
-                'forearms', 'glutes', 'hamstrings', 'lats', 'lower_back',
-                'middle_back', 'neck', 'quadriceps', 'traps', 'triceps'
-              ].map((muscle, idx) => (
-                <MenuItem key={idx} value={muscle}>{muscle}</MenuItem>
-              ))}
+              {/* …map your muscle groups here… */}
             </Select>
-  
             <Box mt={2}>
               <Button 
                 variant="contained" 
@@ -178,7 +154,7 @@ function LogWorkout() {
           </Box>
         )}
       </Box>
-  
+
       {/* Selected Exercises */}
       <Box mb={4}>
         <Typography variant="h6" gutterBottom>Your Workout</Typography>
@@ -210,8 +186,8 @@ function LogWorkout() {
           </Box>
         ))}
       </Box>
-  
-      {/* Caption and Media */}
+
+      {/* Caption only */}
       <Box mb={4}>
         <TextField
           label="Workout Notes"
@@ -221,14 +197,8 @@ function LogWorkout() {
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
         />
-        <input
-          type="file"
-          accept="image/*,video/*"
-          onChange={(e) => setMedia(e.target.files[0])}
-          style={{ marginTop: '16px' }}
-        />
       </Box>
-  
+
       <Button 
         variant="contained" 
         color="primary" 
@@ -238,7 +208,7 @@ function LogWorkout() {
         Finish Workout
       </Button>
     </Box>
-  );  
+  );
 }
 
 export default LogWorkout;

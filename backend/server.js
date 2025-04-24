@@ -207,6 +207,45 @@ app.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
+// PATCH /profile — update your username & biography
+app.patch("/profile", authenticateToken, async (req, res) => {
+  const { username, biography } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE users
+         SET username = $1,
+             biography = $2
+       WHERE user_id = $3
+       RETURNING user_id, username, profile_picture, biography, privacy_setting`,
+      [username, biography, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    res.sendStatus(500);
+  }
+});
+
+// DELETE /posts/:id — allow owners to delete their post
+app.delete("/posts/:id", authenticateToken, async (req, res) => {
+  const postId = req.params.id;
+  try {
+    // verify ownership
+    const ownerRes = await pool.query(
+      "SELECT user_id FROM posts WHERE post_id = $1",
+      [postId]
+    );
+    if (!ownerRes.rows.length || ownerRes.rows[0].user_id !== req.user.id) {
+      return res.sendStatus(403);
+    }
+    await pool.query("DELETE FROM posts WHERE post_id = $1", [postId]);
+    res.sendStatus(204);
+  } catch (err) {
+    console.error("Error deleting post:", err);
+    res.sendStatus(500);
+  }
+});
+
 // POST /posts/:id/like — like a post
 app.post("/posts/:id/like", authenticateToken, async (req, res) => {
   try {

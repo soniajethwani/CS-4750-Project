@@ -26,8 +26,20 @@ export default function UserProfile() {
   const [followersOpen, setFollowersOpen] = useState(false);
   const [followingOpen, setFollowingOpen] = useState(false);
 
+  // —— NEW STATE FOR FOLLOW BUTTON ——
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+
   const token = localStorage.getItem("token");
   const headers = { headers: { Authorization: `Bearer ${token}` } };
+
+  // Decode current user ID from JWT
+  useEffect(() => {
+    if (!token) return;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    setCurrentUserId(payload.id);
+  }, [token]);
 
   // 1) Fetch basic profile info + follower counts
   useEffect(() => {
@@ -48,13 +60,41 @@ export default function UserProfile() {
     loadPosts();
   }, [id]);
 
-  // 3) Helpers to load followers / following lists
+  // 3) Fetch follow status (only when viewing someone else)
+  useEffect(() => {
+    if (currentUserId && currentUserId !== parseInt(id, 10)) {
+      axios.get(`http://localhost:4000/is-following/${id}`, headers)
+        .then(res => setIsFollowing(res.data.isFollowing))
+        .catch(console.error);
+      axios.get(`http://localhost:4000/is-pending/${id}`, headers)
+        .then(res => setPending(res.data.pending))
+        .catch(console.error);
+    }
+  }, [id, currentUserId]);
+
+  // Toggle follow/unfollow
+  const toggleFollow = async () => {
+    if (isFollowing) {
+      await axios.post(`http://localhost:4000/unfollow/${id}`, {}, headers);
+      setIsFollowing(false);
+    } else {
+      try {
+        await axios.post(`http://localhost:4000/follow/${id}`, {}, headers);
+        setIsFollowing(true);
+      } catch (err) {
+        // 202 = follow request pending
+        if (err.response?.status === 202) setPending(true);
+      }
+    }
+  };
+
+  // Helpers to load followers / following lists
   const fetchFollowers = async () => {
     setFollowersOpen(true);
     const res = await axios.get(`http://localhost:4000/users/${id}/followers`, headers);
     setFollowers(res.data);
   };
-  const fetchFollowing = async () => {
+  const fetchFollowingList = async () => {
     setFollowingOpen(true);
     const res = await axios.get(`http://localhost:4000/users/${id}/following`, headers);
     setFollowing(res.data);
@@ -75,14 +115,33 @@ export default function UserProfile() {
         />
         <Box>
           <Typography variant="h5">{profile.username}</Typography>
+
+          {/* —— FOLLOW / UNFOLLOW BUTTON —— */}
+          {currentUserId !== profile.user_id && (
+            <Button
+              variant={isFollowing ? "outlined" : "contained"}
+              color={isFollowing ? "error" : "primary"}
+              onClick={toggleFollow}
+              disabled={pending}
+              sx={{ mt: 1 }}
+            >
+              {isFollowing
+                ? "Unfollow"
+                : pending
+                  ? "Pending"
+                  : "Follow"}
+            </Button>
+          )}
+
           <Box display="flex" gap={2} mt={1}>
             <Link component="button" onClick={fetchFollowers}>
               {profile.follower_count} followers
             </Link>
-            <Link component="button" onClick={fetchFollowing}>
+            <Link component="button" onClick={fetchFollowingList}>
               {profile.following_count} following
             </Link>
           </Box>
+
           <Typography mt={1}>{profile.biography || "No bio provided."}</Typography>
         </Box>
       </Box>
@@ -130,5 +189,5 @@ export default function UserProfile() {
         </DialogActions>
       </Dialog>
     </Box>
-);
+  );
 }
