@@ -18,52 +18,57 @@ import PostCard from '../components/PostCard';
 export default function GroupProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const [group, setGroup] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [openPost, setOpenPost] = useState(false);
   const [caption, setCaption] = useState('');
 
   useEffect(() => {
     async function load() {
-      const res = await axios.get(`http://localhost:4000/groups/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      const token = localStorage.getItem('token');
+      // fetch group metadata + members
+      const grpRes = await axios.get(`http://localhost:4000/groups/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setData(res.data);
+      setGroup(grpRes.data.group);
+      setMembers(grpRes.data.members);
+
+      // fetch full feed & filter to this group
+      const feedRes = await axios.get('http://localhost:4000/feed', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPosts(feedRes.data.filter(p => p.group_id === parseInt(id, 10)));
     }
     load();
   }, [id]);
 
-  if (!data) return <div>Loading…</div>;
-  const { group, members, posts } = data;
+  if (!group) return <div>Loading…</div>;
 
   const joinOrLeave = async () => {
-    const url = group.is_member
-      ? `/groups/${id}/leave`
-      : `/groups/${id}/join`;
-    await axios.post(`http://localhost:4000${url}`, {}, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    const path = group.is_member ? 'leave' : 'join';
+    await axios.post(`http://localhost:4000/groups/${id}/${path}`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
     });
-    const res = await axios.get(`http://localhost:4000/groups/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    setData(res.data);
-    if (!group.is_member) setOpenPost(false);
+    setOpenPost(false);
+    navigate(0); // simple reload
   };
 
   const handleSubmitPost = async () => {
+    const token = localStorage.getItem('token');
     await axios.post('http://localhost:4000/posts',
       { caption, exercises: JSON.stringify([]), group_id: id },
-      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
-    const res = await axios.get(`http://localhost:4000/groups/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    setData(res.data);
     setCaption('');
     setOpenPost(false);
+    navigate(0); // reload to pick up new comment/like state
   };
 
   return (
     <Box p={4} pb={10}>
+      {/* header */}
       <Box display="flex" justifyContent="space-between" mb={3}>
         <Typography variant="h3">{group.group_name}</Typography>
         <Button
@@ -80,25 +85,19 @@ export default function GroupProfile() {
         {group.member_count} members
       </Typography>
 
+      {/* avatars */}
       <Grid container spacing={1} mb={4}>
         {members.map(m => (
           <Grid item key={m.user_id}>
-            <Avatar
-              src={
-                m.profile_picture
-                  ? `data:image/jpeg;base64,${m.profile_picture}`
-                  : undefined
-              }
-            />
+            <Avatar src={m.profile_picture ? `data:image/jpeg;base64,${m.profile_picture}` : undefined} />
           </Grid>
         ))}
       </Grid>
 
+      {/* new post */}
       {(group.is_member || group.privacy_setting === 'public') && (
         <>
-          <Button variant="contained" onClick={() => setOpenPost(true)}>
-            Post to Group
-          </Button>
+          <Button variant="contained" onClick={() => setOpenPost(true)}>Post to Group</Button>
           <Dialog open={openPost} onClose={() => setOpenPost(false)}>
             <DialogTitle>New Group Post</DialogTitle>
             <DialogContent>
@@ -113,11 +112,7 @@ export default function GroupProfile() {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenPost(false)}>Cancel</Button>
-              <Button
-                onClick={handleSubmitPost}
-                variant="contained"
-                disabled={!caption.trim()}
-              >
+              <Button onClick={handleSubmitPost} variant="contained" disabled={!caption.trim()}>
                 Post
               </Button>
             </DialogActions>
@@ -125,15 +120,12 @@ export default function GroupProfile() {
         </>
       )}
 
+      {/* posts */}
       <Box mt={4}>
         {posts.length > 0 ? (
-          posts.map(post => (
-            <PostCard key={post.post_id} post={post} />
-          ))
+          posts.map(post => <PostCard key={post.post_id} post={post} />)
         ) : (
-          <Typography color="text.secondary">
-            No posts here yet.
-          </Typography>
+          <Typography color="text.secondary">No posts here yet.</Typography>
         )}
       </Box>
     </Box>
