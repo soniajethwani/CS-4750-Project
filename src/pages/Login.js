@@ -21,6 +21,17 @@ function Login() {
 
   const navigate = useNavigate();
 
+  const handleLogin = async (e) => {
+    try {
+      e.preventDefault();
+      const res = await axios.post("http://localhost:4000/login", { username, password });
+      localStorage.setItem("token", res.data.token);
+      navigate("/feed");
+    } catch (err) {
+      alert(err.response?.data?.error || "Registration failed.");
+    }
+  };
+
   const handleRegister = async () => {
     try {
       // check username length
@@ -42,17 +53,6 @@ function Login() {
       alert("Registered successfully!");
     } catch (err) {
       alert("Login failed: Username or password not registered.");
-    }
-  };
-
-  const handleLogin = async (e) => {
-    try {
-      e.preventDefault();
-      const res = await axios.post("http://localhost:4000/login", { username, password });
-      localStorage.setItem("token", res.data.token);
-      navigate("/feed");
-    } catch (err) {
-      alert(err.response?.data?.error || "Registration failed.");
     }
   };
 

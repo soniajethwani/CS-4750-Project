@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Box, Typography, Card, CardContent } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import PostCard from '../components/PostCard';
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const loadFeed = async () => {
+    async function loadFeed() {
       const res = await axios.get('http://localhost:4000/feed', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setPosts(res.data);
-    };
+    }
     loadFeed();
   }, []);
 
   return (
-    <Box p={4} pb={10 /* account for nav */}>
+    <Box p={4} pb={10}>
       <Typography variant="h4" mb={2}>Your Feed</Typography>
       {posts.map(post => (
         <Card key={post.post_id} sx={{ mb: 2 }}>
@@ -40,7 +41,7 @@ export default function Feed() {
             ))}
 
             {/* media */}
-            {Array.isArray(post.media) && post.media.length > 0 && post.media.some(m => m.data) && post.media.map(m => (
+            {post.media?.map(m => (
               <Box key={m.media_id} mt={2}>
                 {m.media_type === 'image' ? (
                   <img

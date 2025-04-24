@@ -204,6 +204,162 @@ app.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
+// POST /posts/:id/like — like a post
+app.post("/posts/:id/like", authenticateToken, async (req, res) => {
+  try {
+    await pool.query(
+      `INSERT INTO Likes (post_id, user_id) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,           // ensures one-like-per-user
+      [req.params.id, req.user.id]
+    );
+    // return new count
+    const result = await pool.query(
+      `SELECT COUNT(*) AS count FROM Likes WHERE post_id = $1`,
+      [req.params.id]
+    );
+    res.json({ count: +result.rows[0].count, liked: true });
+  } catch (err) {
+    console.error("Like error:", err);
+    res.sendStatus(500);
+  }
+});
+
+// DELETE /posts/:id/like — unlike a post
+app.delete("/posts/:id/like", authenticateToken, async (req, res) => {
+  try {
+    await pool.query(
+      `DELETE FROM Likes WHERE post_id = $1 AND user_id = $2`,
+      [req.params.id, req.user.id]
+    );
+    const result = await pool.query(
+      `SELECT COUNT(*) AS count FROM Likes WHERE post_id = $1`,
+      [req.params.id]
+    );
+    res.json({ count: +result.rows[0].count, liked: false });
+  } catch (err) {
+    console.error("Unlike error:", err);
+    res.sendStatus(500);
+  }
+});
+
+// GET /posts/:id/like-status — return { count, liked } for the current user
+app.get("/posts/:id/like-status", authenticateToken, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user.id;
+
+    // total likes
+    const countRes = await pool.query(
+      "SELECT COUNT(*) AS count FROM Likes WHERE post_id = $1",
+      [postId]
+    );
+
+    // whether this user has liked it
+    const likedRes = await pool.query(
+      "SELECT 1 FROM Likes WHERE post_id = $1 AND user_id = $2",
+      [postId, userId]
+    );
+
+    const count = parseInt(countRes.rows[0].count, 10);
+    const liked = likedRes.rows.length > 0;
+
+    res.json({ count, liked });
+  } catch (err) {
+    console.error("Like-status error:", err);
+    res.sendStatus(500);
+  }
+});
+
+// POST /posts/:id/comments — add a new comment
+app.post("/posts/:id/comments", authenticateToken, async (req, res) => {
+  const { content } = req.body;
+  const userId = req.user.id;
+  const postId = req.params.id;
+
+  try {
+    // insert
+    const insert = await pool.query(
+      `INSERT INTO Comments (post_id, user_id, content)
+       VALUES ($1, $2, $3)
+       RETURNING comment_id, content, timestamp`,
+      [postId, userId, content]
+    );
+    const row = insert.rows[0];
+
+    // fetch user info
+    const u = (await pool.query(
+      `SELECT username, profile_picture FROM Users WHERE user_id = $1`,
+      [userId]
+    )).rows[0];
+
+    // return exactly the same shape as in /feed.comments
+    res.status(201).json({
+      comment_id: row.comment_id,
+      content: row.content,
+      timestamp: row.timestamp,
+      user_id: userId,
+      username: u.username,
+      profile_picture: u.profile_picture
+    });
+  } catch (err) {
+    console.error("Add comment error:", err);
+    res.sendStatus(500);
+  }
+});
+
+// DELETE /comments/:id — delete a comment
+app.delete("/comments/:id", authenticateToken, async (req, res) => {
+  try {
+    // check permissions: either comment owner, or post owner, or group admin
+    const cid = req.params.id;
+    const userId = req.user.id;
+    const permRes = await pool.query(
+      `SELECT 
+         c.user_id AS commenter,
+         p.user_id AS post_owner,
+         p.group_id,
+         g.admin_id
+       FROM Comments c
+       JOIN Posts p ON c.post_id = p.post_id
+       LEFT JOIN Groups g ON p.group_id = g.group_id
+       WHERE c.comment_id = $1`,
+      [cid]
+    );
+    if (!permRes.rows.length) return res.sendStatus(404);
+    const { commenter, post_owner, group_id, admin_id } = permRes.rows[0];
+    if (
+      commenter !== userId &&
+      post_owner !== userId &&
+      !(group_id && admin_id === userId)
+    ) {
+      return res.sendStatus(403);
+    }
+    await pool.query(`DELETE FROM Comments WHERE comment_id = $1`, [cid]);
+    res.sendStatus(204);
+  } catch (err) {
+    console.error("Delete comment error:", err);
+    res.sendStatus(500);
+  }
+});
+
+// GET /posts/:id/comments — fetch comments for a post
+app.get("/posts/:id/comments", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.comment_id, c.content, c.timestamp, u.user_id, u.username, u.profile_picture
+       FROM Comments c
+       JOIN Users u ON c.user_id = u.user_id
+       WHERE c.post_id = $1
+       ORDER BY c.timestamp ASC`,
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch comments error:", err);
+    res.sendStatus(500);
+  }
+});
+
 app.get("/posts", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
@@ -502,9 +658,8 @@ app.get("/api/exercises", authenticateToken, async (req, res) => {
   }
 });
 
-// GET /feed — posts by users you follow or in your groups
+// GET /feed — posts, media, workout, likes & comments all in one go
 app.get("/feed", authenticateToken, async (req, res) => {
-  const client = await pool.connect();
   try {
     const userId = req.user.id;
     const feedRes = await client.query(
@@ -569,8 +724,6 @@ app.get("/feed", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("Feed fetch error:", err);
     res.status(500).json({ error: "Failed to fetch feed" });
-  } finally {
-    client.release();
   }
 });
 
