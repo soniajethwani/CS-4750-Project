@@ -58,17 +58,6 @@ export default function NewGroup() {
           rows={4}
           margin="normal"
         />
-        <FormControl fullWidth margin="normal">
-          <InputLabel>Privacy</InputLabel>
-          <Select
-            value={privacy}
-            label="Privacy"
-            onChange={(e) => setPrivacy(e.target.value)}
-          >
-            <MenuItem value="public">Public</MenuItem>
-            <MenuItem value="private">Private</MenuItem>
-          </Select>
-        </FormControl>
         <Box mt={2}>
           <Button type="submit" variant="contained" disabled={!groupName.trim()}>
             Create Group
