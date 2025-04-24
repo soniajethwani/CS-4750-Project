@@ -7,14 +7,13 @@ import {
   Button,
   Avatar,
   Grid,
-  Card,
-  CardContent,
   Dialog,
   DialogTitle,
   DialogContent,
-  TextField,
-  DialogActions
+  DialogActions,
+  TextField
 } from '@mui/material';
+import PostCard from '../components/PostCard';
 
 export default function GroupProfile() {
   const { id } = useParams();
@@ -22,47 +21,35 @@ export default function GroupProfile() {
   const [data, setData] = useState(null);
   const [openPost, setOpenPost] = useState(false);
   const [caption, setCaption] = useState('');
-  // you could expand to exercises/media if you want full workout-posting
 
   useEffect(() => {
-    const load = async () => {
+    async function load() {
       const res = await axios.get(`http://localhost:4000/groups/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setData(res.data);
-    };
+    }
     load();
   }, [id]);
 
   if (!data) return <div>Loading…</div>;
   const { group, members, posts } = data;
 
-  const handleJoin = async () => {
-    await axios.post(`http://localhost:4000/groups/${id}/join`, {}, {
+  const joinOrLeave = async () => {
+    const url = group.is_member
+      ? `/groups/${id}/leave`
+      : `/groups/${id}/join`;
+    await axios.post(`http://localhost:4000${url}`, {}, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
-    // reload
     const res = await axios.get(`http://localhost:4000/groups/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     setData(res.data);
-  };
-
-  const handleLeave = async () => {
-    await axios.post(`http://localhost:4000/groups/${id}/leave`, {}, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    navigate('/groups');
-  };
-
-  const handleOpenPost = () => setOpenPost(true);
-  const handleClosePost = () => {
-    setCaption('');
-    setOpenPost(false);
+    if (!group.is_member) setOpenPost(false);
   };
 
   const handleSubmitPost = async () => {
-    // simple text-only post; expand for media/exercises if desired
     await axios.post('http://localhost:4000/posts',
       { caption, exercises: JSON.stringify([]), group_id: id },
       { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
@@ -71,23 +58,21 @@ export default function GroupProfile() {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     setData(res.data);
-    handleClosePost();
+    setCaption('');
+    setOpenPost(false);
   };
 
   return (
     <Box p={4} pb={10}>
       <Box display="flex" justifyContent="space-between" mb={3}>
         <Typography variant="h3">{group.group_name}</Typography>
-        {group.is_member
-          ? <Button color="error" variant="outlined" onClick={handleLeave}>
-              Leave Group
-            </Button>
-          : group.privacy_setting === 'public'
-            ? <Button variant="contained" onClick={handleJoin}>
-                Join Group
-              </Button>
-            : <Button disabled>Request to Join</Button>
-        }
+        <Button
+          variant={group.is_member ? 'outlined' : 'contained'}
+          color={group.is_member ? 'error' : 'primary'}
+          onClick={joinOrLeave}
+        >
+          {group.is_member ? 'Leave Group' : group.privacy_setting === 'public' ? 'Join Group' : 'Request to Join'}
+        </Button>
       </Box>
 
       <Typography mb={2}>{group.description}</Typography>
@@ -95,26 +80,26 @@ export default function GroupProfile() {
         {group.member_count} members
       </Typography>
 
-      {/* Member avatars */}
       <Grid container spacing={1} mb={4}>
         {members.map(m => (
           <Grid item key={m.user_id}>
             <Avatar
-              src={m.profile_picture
-                ? `data:image/jpeg;base64,${m.profile_picture}`
-                : undefined}
+              src={
+                m.profile_picture
+                  ? `data:image/jpeg;base64,${m.profile_picture}`
+                  : undefined
+              }
             />
           </Grid>
         ))}
       </Grid>
 
-      {/* Post-to-group button */}
-      {group.is_member || group.privacy_setting === 'public' ? (
+      {(group.is_member || group.privacy_setting === 'public') && (
         <>
-          <Button variant="contained" onClick={handleOpenPost}>
+          <Button variant="contained" onClick={() => setOpenPost(true)}>
             Post to Group
           </Button>
-          <Dialog open={openPost} onClose={handleClosePost}>
+          <Dialog open={openPost} onClose={() => setOpenPost(false)}>
             <DialogTitle>New Group Post</DialogTitle>
             <DialogContent>
               <TextField
@@ -127,7 +112,7 @@ export default function GroupProfile() {
               />
             </DialogContent>
             <DialogActions>
-              <Button onClick={handleClosePost}>Cancel</Button>
+              <Button onClick={() => setOpenPost(false)}>Cancel</Button>
               <Button
                 onClick={handleSubmitPost}
                 variant="contained"
@@ -138,22 +123,14 @@ export default function GroupProfile() {
             </DialogActions>
           </Dialog>
         </>
-      ) : null}
+      )}
 
-      {/* Wall of posts */}
       <Box mt={4}>
-        {posts.map(post => (
-          <Card key={post.post_id} sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary">
-                {post.username} • {new Date(post.timestamp).toLocaleString()}
-              </Typography>
-              <Typography paragraph>{post.caption}</Typography>
-              {/* workout cards etc if present… */}
-            </CardContent>
-          </Card>
-        ))}
-        {posts.length === 0 && (
+        {posts.length > 0 ? (
+          posts.map(post => (
+            <PostCard key={post.post_id} post={post} />
+          ))
+        ) : (
           <Typography color="text.secondary">
             No posts here yet.
           </Typography>
