@@ -4,6 +4,7 @@ import { Box, Typography, Card, CardContent } from '@mui/material';
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     const loadFeed = async () => {

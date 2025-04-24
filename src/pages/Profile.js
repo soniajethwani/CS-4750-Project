@@ -13,6 +13,9 @@ function Profile() {
   const [following, setFollowing] = useState([]);
   const [groupsOpen, setGroupsOpen] = useState(false);
   const [groups, setGroups] = useState([]);
+  const [followRequests, setFollowRequests] = useState([]);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -27,6 +30,12 @@ function Profile() {
       }
     };
     fetchProfileData();
+  }, []);
+
+  useEffect(() => {
+    axios.get("http://localhost:4000/follow-requests", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    }).then((res) => setFollowRequests(res.data));
   }, []);
 
   const handleLogout = () => {
@@ -67,6 +76,30 @@ function Profile() {
       console.error('Failed to fetch following:', err);
     }
   };
+  const accept = async (uid) => {
+      await axios.post(`http://localhost:4000/follow-requests/${uid}/accept`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+    
+      setFollowRequests(prev => prev.filter(r => r.user_id !== uid));
+    
+      try {
+        const response = await axios.get('http://localhost:4000/fullprofile', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setProfileData(response.data);
+      } catch (err) {
+        console.error("Failed to refresh profile data:", err);
+      }
+    };
+  
+  
+  const decline = async (uid) => {
+    await axios.delete(`http://localhost:4000/follow-requests/${uid}/decline`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    });
+    setFollowRequests(prev => prev.filter(r => r.user_id !== uid));
+  };
 
   const handleGroupsOpen = () => {
     setGroupsOpen(true);
@@ -101,11 +134,19 @@ function Profile() {
           </Button>
           <Button 
             variant="contained" 
-            color="secondary"
+            color="primary"
             onClick={() => navigate('/log-workout')}
             style={{ marginRight: '16px' }}
           >
             Log Workout
+          </Button>
+          <Button 
+            variant="contained" 
+            color="primary"
+            onClick={() => setRequestsOpen(true)}
+            style={{ marginRight: '16px' }}
+          >
+            View Requests
           </Button>
           <Button 
             variant="contained" 
@@ -210,7 +251,17 @@ function Profile() {
         <DialogContent>
           <List>
             {followers.map((f) => (
-              <ListItem key={f.user_id}>{f.username}</ListItem>
+              <ListItem 
+                key={f.user_id} 
+                button 
+                onClick={() => {
+                  setFollowersOpen(false);
+                  navigate(`/users/${f.user_id}`);
+                }}
+                sx={{ cursor: 'pointer' }}
+              >
+                <Typography>{f.username}</Typography>
+              </ListItem>
             ))}
           </List>
         </DialogContent>
@@ -225,7 +276,18 @@ function Profile() {
         <DialogContent>
           <List>
             {following.map((f) => (
-              <ListItem key={f.user_id}>{f.username}</ListItem>
+              <ListItem 
+                key={f.user_id} 
+                button 
+                onClick={() => {
+                  setFollowingOpen(false);
+                  navigate(`/users/${f.user_id}`);
+                }}
+                sx={{ cursor: 'pointer' }}
+              >
+                <Typography>{f.username}</Typography>
+              </ListItem>
+            
             ))}
           </List>
         </DialogContent>
@@ -240,12 +302,47 @@ function Profile() {
         <DialogContent>
           <List>
             {groups.map((g) => (
-              <ListItem key={g.group_id}>{g.group_name}</ListItem>
+              <ListItem
+                key={g.group_id}
+                button
+                onClick={() => {
+                  setGroupsOpen(false);
+                  navigate(`/groups/${g.group_id}`);
+                }}
+                sx={{ cursor: 'pointer' }}
+              >
+                <Typography>{g.group_name}</Typography>
+              </ListItem>
             ))}
           </List>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleGroupsClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View requests modal */}
+      <Dialog open={requestsOpen} onClose={() => setRequestsOpen(false)}>
+        <DialogTitle>Follow Requests</DialogTitle>
+        <DialogContent>
+          {followRequests.length === 0 ? (
+            <Typography>No pending requests.</Typography>
+          ) : (
+            <List>
+              {followRequests.map(req => (
+                <ListItem key={req.user_id} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography>{req.username}</Typography>
+                  <Box>
+                    <Button size="small" color="success" onClick={() => accept(req.user_id)}>Accept</Button>
+                    <Button size="small" color="error" onClick={() => decline(req.user_id)}>Decline</Button>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRequestsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>
