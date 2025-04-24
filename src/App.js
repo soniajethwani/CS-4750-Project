@@ -9,6 +9,7 @@ import Groups from "./pages/Groups";
 import Layout from "./components/Layout";
 import GroupProfile from "./pages/GroupProfile";
 import UserProfile from "./pages/UserProfile";
+import NewGroup from "./pages/NewGroup";
 
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/log-workout" element={<LogWorkout />} />
           <Route path="/groups" element={<Groups />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/groups/new" element={<NewGroup />} />
           <Route path="/groups/:id" element={<GroupProfile />} />
           <Route path="/users/:id" element={<UserProfile />} />
         </Route>

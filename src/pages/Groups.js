@@ -22,7 +22,7 @@ export default function Groups() {
       const token = localStorage.getItem("token");
       const headers = { headers: { Authorization: `Bearer ${token}` } };
 
-      // Fetch your groups *and* the full feed in parallel
+      // Fetch your groups and the full feed in parallel
       const [groupsRes, feedRes] = await Promise.all([
         axios.get("http://localhost:4000/groups", headers),
         axios.get("http://localhost:4000/feed",   headers),

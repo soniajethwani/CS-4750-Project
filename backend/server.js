@@ -165,11 +165,14 @@ app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   const hash = await bcrypt.hash(password, 10);
   try {
-    await pool.query(
-      "INSERT INTO users (username, password) VALUES ($1, $2)", 
-      [username, hash]
+    const result = await pool.query(
+      "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING user_id",
+       [username, hash]
     );
-    res.status(201).send("User created");
+    const userId = result.rows[0].user_id;
+
+    const token = jwt.sign({ id: userId, username }, SECRET);
+    res.status(201).json({ token });
   } catch (err) {
     res.status(400).json({ error: "User already exists or DB error" });
   }

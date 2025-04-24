@@ -36,17 +36,18 @@ function Login() {
 
   const handleRegister = async () => {
     try {
-      await axios.post("http://localhost:4000/register", {
+      const res = await axios.post("http://localhost:4000/register", {
         username: registerUsername,
         password: registerPassword
       });
-      alert("Registered successfully!");
+      localStorage.setItem("token", res.data.token);
       setOpenRegisterModal(false);
       navigate("/feed");
     } catch (err) {
       alert(err.response?.data?.error || "Registration failed.");
     }
   };
+
 
   return (
     <Box
