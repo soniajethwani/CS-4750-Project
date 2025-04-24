@@ -616,6 +616,43 @@ app.get("/following", authenticateToken, async (req, res) => {
   }
 });
 
+// GET /users/:id/followers — list followers of any user
+app.get("/users/:id/followers", authenticateToken, async (req, res) => {
+  const targetId = req.params.id;
+  try {
+    const result = await pool.query(
+      `SELECT u.user_id, u.username
+       FROM followers f
+       JOIN users u ON f.follower_user_id = u.user_id
+       WHERE f.followed_user_id = $1
+       ORDER BY u.username`,
+      [targetId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Failed to fetch followers for user", targetId, err);
+    res.status(500).json({ error: "Failed to fetch followers" });
+  }
+});
+
+// GET /users/:id/following — list who any user is following
+app.get("/users/:id/following", authenticateToken, async (req, res) => {
+  const targetId = req.params.id;
+  try {
+    const result = await pool.query(
+      `SELECT u.user_id, u.username
+       FROM followers f
+       JOIN users u ON f.followed_user_id = u.user_id
+       WHERE f.follower_user_id = $1
+       ORDER BY u.username`,
+      [targetId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Failed to fetch following for user", targetId, err);
+    res.status(500).json({ error: "Failed to fetch following" });
+  }
+});
 
 // Single exercise endpoint that combines DB and API results
 app.get("/api/exercises", authenticateToken, async (req, res) => {

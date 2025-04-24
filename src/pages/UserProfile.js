@@ -2,70 +2,66 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { Box, Typography, Avatar, Grid, Card, CardContent, Button } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  Link
+} from "@mui/material";
+import PostCard from "../components/PostCard";
 
 export default function UserProfile() {
-  const { id } = useParams();
+  const { id } = useParams();                 // the profile we’re viewing
   const [profile, setProfile] = useState(null);
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [pendingRequest, setPendingRequest] = useState(false);
+  const [posts, setPosts] = useState([]);      // rich posts from /feed
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [followingOpen, setFollowingOpen] = useState(false);
 
+  const token = localStorage.getItem("token");
+  const headers = { headers: { Authorization: `Bearer ${token}` } };
 
+  // 1) Fetch basic profile info + follower counts
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      const res = await axios.get(`http://localhost:4000/users/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+    async function loadProfile() {
+      const res = await axios.get(`http://localhost:4000/users/${id}`, headers);
       setProfile(res.data);
-    };
-    fetchUserProfile();
-  }, [id]);
-
-  useEffect(() => {
-    const tokenPayload = JSON.parse(atob(localStorage.getItem("token").split(".")[1]));
-    setCurrentUserId(tokenPayload.id);
-  }, []);
-
-  useEffect(() => {
-    const fetchFollowStatus = async () => {
-      const res = await axios.get(`http://localhost:4000/is-following/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-      });
-      setIsFollowing(res.data.isFollowing);
-    };
-    if (id) fetchFollowStatus();
-  }, [id]);
-  useEffect(() => {
-    const checkPendingRequest = async () => {
-      const res = await axios.get(`http://localhost:4000/is-pending/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-      });
-      setPendingRequest(res.data.pending);
-    };
-    if (id) checkPendingRequest();
-  }, [id]);
-  
-  if (!profile) return <Typography>Loading…</Typography>;
-  
-  const toggleFollow = async () => {
-    const url = isFollowing ? `/unfollow/${id}` : `/follow/${id}`;
-    await axios.post(`http://localhost:4000${url}`, {}, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-    });
-  
-    if (isFollowing) {
-      setIsFollowing(false);
-    } else {
-      if (profile.privacy_setting === "private") {
-        setPendingRequest(true);
-      } else {
-        setIsFollowing(true);
-      }
     }
+    loadProfile();
+  }, [id]);
+
+  // 2) Fetch the full feed and filter to just this user’s posts
+  useEffect(() => {
+    async function loadPosts() {
+      const res = await axios.get("http://localhost:4000/feed", headers);
+      const userPosts = res.data.filter(p => p.user_id === parseInt(id, 10));
+      setPosts(userPosts);
+    }
+    loadPosts();
+  }, [id]);
+
+  // 3) Helpers to load followers / following lists
+  const fetchFollowers = async () => {
+    setFollowersOpen(true);
+    const res = await axios.get(`http://localhost:4000/users/${id}/followers`, headers);
+    setFollowers(res.data);
   };
-  
-  
+  const fetchFollowing = async () => {
+    setFollowingOpen(true);
+    const res = await axios.get(`http://localhost:4000/users/${id}/following`, headers);
+    setFollowing(res.data);
+  };
+
+  if (!profile) return <Typography>Loading…</Typography>;
+
   return (
     <Box p={4}>
       <Box display="flex" alignItems="center" mb={2}>
@@ -79,50 +75,60 @@ export default function UserProfile() {
         />
         <Box>
           <Typography variant="h5">{profile.username}</Typography>
-          <Typography color="text.secondary">
-            {profile.follower_count} followers • {profile.following_count} following
-          </Typography>
+          <Box display="flex" gap={2} mt={1}>
+            <Link component="button" onClick={fetchFollowers}>
+              {profile.follower_count} followers
+            </Link>
+            <Link component="button" onClick={fetchFollowing}>
+              {profile.following_count} following
+            </Link>
+          </Box>
           <Typography mt={1}>{profile.biography || "No bio provided."}</Typography>
         </Box>
-
       </Box>
-       {currentUserId !== profile.user_id && (
-            <Button 
-                variant="contained" 
-                onClick={toggleFollow} 
-                disabled={pendingRequest}
-            >
-                {isFollowing
-                ? "Unfollow"
-                : pendingRequest
-                    ? "Pending"
-                    : profile.privacy_setting === "private"
-                    ? "Request to Follow"
-                    : "Follow"}
-            </Button>
-        )}
-        {profile.privacy_setting === "private" ? (
-        <Typography mt={4} color="text.secondary">
-            This profile is private. Posts are hidden.
-        </Typography>
+
+      {/* POSTS */}
+      <Box mt={4}>
+        {posts.length > 0 ? (
+          posts.map(post => <PostCard key={post.post_id} post={post} />)
         ) : (
-        <Box mt={4}>
-            {profile.posts.length > 0 ? (
-            profile.posts.map((post) => (
-                <Card key={post.post_id} sx={{ mb: 2 }}>
-                <CardContent>
-                    <Typography variant="caption" color="text.secondary">
-                    {new Date(post.timestamp).toLocaleString()}
-                    </Typography>
-                    <Typography>{post.caption}</Typography>
-                </CardContent>
-                </Card>
-            ))
-            ) : (
-            <Typography color="text.secondary">No posts yet.</Typography>
-            )}
-        </Box>
+          <Typography color="text.secondary">
+            {profile.privacy_setting === "private"
+              ? "This profile is private. Posts are hidden."
+              : "No posts yet."}
+          </Typography>
         )}
+      </Box>
+
+      {/* FOLLOWERS DIALOG */}
+      <Dialog open={followersOpen} onClose={() => setFollowersOpen(false)}>
+        <DialogTitle>Followers</DialogTitle>
+        <DialogContent>
+          <List>
+            {followers.map(u => (
+              <ListItem key={u.user_id}>{u.username}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFollowersOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* FOLLOWING DIALOG */}
+      <Dialog open={followingOpen} onClose={() => setFollowingOpen(false)}>
+        <DialogTitle>Following</DialogTitle>
+        <DialogContent>
+          <List>
+            {following.map(u => (
+              <ListItem key={u.user_id}>{u.username}</ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFollowingOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
-  );
+);
 }
