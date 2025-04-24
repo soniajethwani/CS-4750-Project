@@ -8,6 +8,8 @@ import LogWorkout from "./pages/LogWorkout";
 import Groups from "./pages/Groups";
 import Layout from "./components/Layout";
 import GroupProfile from "./pages/GroupProfile";
+import UserProfile from "./pages/UserProfile";
+
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
           <Route path="/groups" element={<Groups />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/groups/:id" element={<GroupProfile />} />
+          <Route path="/users/:id" element={<UserProfile />} />
         </Route>
       </Routes>
     </Router>

@@ -5,6 +5,7 @@ import PostCard from '../components/PostCard';
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     async function loadFeed() {

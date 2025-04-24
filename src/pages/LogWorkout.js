@@ -14,6 +14,8 @@ function LogWorkout() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const groupId = params.get('groupId');
+  const [openCustomDialog, setOpenCustomDialog] = useState(false);
+  const [customExercise, setCustomExercise] = useState({ name: '', muscle: '' });
 
 
   // Fetch exercises when search params change
@@ -82,28 +84,28 @@ function LogWorkout() {
       <Box mb={4}>
         <Typography variant="h6" gutterBottom>Find Exercises</Typography>
         <Select
-            value={searchParams.muscle}
-            onChange={(e) => setSearchParams({ muscle: e.target.value })}
-            displayEmpty
-            fullWidth
+          value={searchParams.muscle}
+          onChange={(e) => setSearchParams({ muscle: e.target.value })}
+          displayEmpty
+          fullWidth
         >
-            <MenuItem value="">All Muscle Groups</MenuItem>
-            <MenuItem value="abdominals">Abdominals</MenuItem>
-            <MenuItem value="abductors">Abductors</MenuItem>
-            <MenuItem value="adductors">Adductors</MenuItem>
-            <MenuItem value="biceps">Biceps</MenuItem>
-            <MenuItem value="calves">Calves</MenuItem>
-            <MenuItem value="chest">Chest</MenuItem>
-            <MenuItem value="forearms">Forearms</MenuItem>
-            <MenuItem value="glutes">Glutes</MenuItem>
-            <MenuItem value="hamstrings">Hamstrings</MenuItem>
-            <MenuItem value="lats">Lats</MenuItem>
-            <MenuItem value="lower_back">Lower Back</MenuItem>
-            <MenuItem value="middle_back">Middle Back</MenuItem>
-            <MenuItem value="neck">Neck</MenuItem>
-            <MenuItem value="quadriceps">Quadriceps</MenuItem>
-            <MenuItem value="traps">Traps</MenuItem>
-            <MenuItem value="triceps">Triceps</MenuItem>
+          <MenuItem value="">All Muscle Groups</MenuItem>
+          <MenuItem value="abdominals">Abdominals</MenuItem>
+          <MenuItem value="abductors">Abductors</MenuItem>
+          <MenuItem value="adductors">Adductors</MenuItem>
+          <MenuItem value="biceps">Biceps</MenuItem>
+          <MenuItem value="calves">Calves</MenuItem>
+          <MenuItem value="chest">Chest</MenuItem>
+          <MenuItem value="forearms">Forearms</MenuItem>
+          <MenuItem value="glutes">Glutes</MenuItem>
+          <MenuItem value="hamstrings">Hamstrings</MenuItem>
+          <MenuItem value="lats">Lats</MenuItem>
+          <MenuItem value="lower_back">Lower Back</MenuItem>
+          <MenuItem value="middle_back">Middle Back</MenuItem>
+          <MenuItem value="neck">Neck</MenuItem>
+          <MenuItem value="quadriceps">Quadriceps</MenuItem>
+          <MenuItem value="traps">Traps</MenuItem>
+          <MenuItem value="triceps">Triceps</MenuItem>
         </Select>
         
         {/* Exercise Results */}
@@ -117,8 +119,66 @@ function LogWorkout() {
             />
           ))}
         </Box>
+  
+        <Button 
+          variant="outlined" 
+          onClick={() => setOpenCustomDialog(true)} 
+          style={{ marginTop: '16px' }}
+        >
+          Add New Exercise
+        </Button>
+  
+        {/* Custom Exercise Input */}
+        {openCustomDialog && (
+          <Box mt={2} p={2} border={1} borderRadius={2}>
+            <Typography variant="h6" gutterBottom>Add Custom Exercise</Typography>
+  
+            <TextField
+              label="Exercise Name"
+              fullWidth
+              value={customExercise.name}
+              onChange={(e) => setCustomExercise(prev => ({ ...prev, name: e.target.value }))}
+              style={{ marginBottom: '16px' }}
+            />
+  
+            <Select
+              value={customExercise.muscle}
+              onChange={(e) => setCustomExercise(prev => ({ ...prev, muscle: e.target.value }))}
+              displayEmpty
+              fullWidth
+            >
+              <MenuItem value="">Select Muscle Group</MenuItem>
+              {[
+                'abdominals', 'abductors', 'adductors', 'biceps', 'calves', 'chest',
+                'forearms', 'glutes', 'hamstrings', 'lats', 'lower_back',
+                'middle_back', 'neck', 'quadriceps', 'traps', 'triceps'
+              ].map((muscle, idx) => (
+                <MenuItem key={idx} value={muscle}>{muscle}</MenuItem>
+              ))}
+            </Select>
+  
+            <Box mt={2}>
+              <Button 
+                variant="contained" 
+                onClick={() => {
+                  if (customExercise.name && customExercise.muscle) {
+                    handleAddExercise(customExercise);
+                    setOpenCustomDialog(false);
+                    setCustomExercise({ name: '', muscle: '' });
+                  }
+                }}
+                style={{ marginRight: '8px' }}
+              >
+                Add
+              </Button>
+              <Button variant="outlined" onClick={() => setOpenCustomDialog(false)}>
+                Cancel
+              </Button>
+            </Box>
+          </Box>
+        )}
       </Box>
-
+  
       {/* Selected Exercises */}
       <Box mb={4}>
         <Typography variant="h6" gutterBottom>Your Workout</Typography>
@@ -150,7 +210,7 @@ function LogWorkout() {
           </Box>
         ))}
       </Box>
-
+  
       {/* Caption and Media */}
       <Box mb={4}>
         <TextField
@@ -168,7 +228,7 @@ function LogWorkout() {
           style={{ marginTop: '16px' }}
         />
       </Box>
-
+  
       <Button 
         variant="contained" 
         color="primary" 
@@ -178,7 +238,7 @@ function LogWorkout() {
         Finish Workout
       </Button>
     </Box>
-  );
+  );  
 }
 
 export default LogWorkout;
