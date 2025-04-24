@@ -32,8 +32,9 @@ function Login() {
     }
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
     try {
+      e.preventDefault();
       const res = await axios.post("http://localhost:4000/login", { username, password });
       localStorage.setItem("token", res.data.token);
       navigate("/feed");
@@ -62,6 +63,7 @@ function Login() {
         <Typography variant="h5" gutterBottom>
           Login / Register
         </Typography>
+        <form onSubmit = {handleLogin}> 
         <TextField
           label="Username"
           variant="outlined"
@@ -81,7 +83,7 @@ function Login() {
           <Button 
             variant="contained" 
             color="primary" 
-            onClick={handleLogin}
+            type = "submit"
             fullWidth
             style={{ marginRight: "10px" }}
           >
@@ -96,6 +98,7 @@ function Login() {
             Register
           </Button>
         </Box>
+        </form>
       </Box>
     </Box>
   );
