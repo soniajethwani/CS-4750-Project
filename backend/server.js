@@ -415,10 +415,20 @@ app.get("/fullprofile", authenticateToken, async (req, res) => {
        ORDER BY p.timestamp DESC`,
       [req.user.id]
     );
+    const updatedPosts = postsRes.rows.map(post => {
+      if (post?.workout?.exercises && Array.isArray(post.workout.exercises)) {
+        post.workout.exercises = post.workout.exercises.map(exercise => ({
+          ...exercise,
+          weight: exercise.weight === 0 ? 'Body Weight' : exercise.weight,
+        }));
+      }
+      return post;
+    });
+
     res.json({
       profile: profileRes.rows[0],
       groups: groupsRes.rows,
-      posts: postsRes.rows
+      posts: updatedPosts,
     });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
@@ -545,7 +555,17 @@ app.get("/feed", authenticateToken, async (req, res) => {
        ORDER BY p.timestamp DESC;`,
       [userId]
     );
-    res.json(feedRes.rows);
+    const updatedPosts = feedRes.rows.map(post => {
+      if (post?.workout?.exercises && Array.isArray(post.workout.exercises)) {
+        post.workout.exercises = post.workout.exercises.map(exercise => ({
+          ...exercise,
+          weight: exercise.weight === 0 ? 'Body Weight' : exercise.weight,
+        }));
+      }
+      return post;
+    });
+
+    res.json(updatedPosts);
   } catch (err) {
     console.error("Feed fetch error:", err);
     res.status(500).json({ error: "Failed to fetch feed" });

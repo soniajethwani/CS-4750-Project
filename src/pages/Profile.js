@@ -154,7 +154,7 @@ function Profile() {
             {post.workout?.exercises?.map((exercise, i) => (
               <Box key={i} p={1} mt={1} border={1} borderRadius={1}>
                 <Typography><strong>{exercise.name}</strong></Typography>
-                <Typography>Weight: {exercise.weight} lbs</Typography>
+                <Typography>Weight: {exercise.weight}{typeof exercise.weight === 'number' ? ' lbs' : ''}</Typography>
                 <Typography>Reps: {exercise.reps}</Typography>
                 <Typography>Sets: {exercise.sets}</Typography>
               </Box>

@@ -33,7 +33,7 @@ export default function Feed() {
             {post.workout?.exercises?.map((ex, i) => (
               <Box key={i} mb={1} p={1} border={1} borderRadius={1}>
                 <Typography><strong>{ex.name}</strong></Typography>
-                <Typography>Weight: {ex.weight}</Typography>
+                <Typography>Weight: {ex.weight}{typeof ex.weight === 'number' ? ' lbs' : ''}</Typography>
                 <Typography>Reps: {ex.reps}, Sets: {ex.sets}</Typography>
               </Box>
             ))}
